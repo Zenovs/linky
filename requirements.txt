@@ -1,0 +1,11 @@
+# Linky - Python Dependencies
+# ===========================
+# Required for building and running the Linky app
+
+# PyObjC - Python-Objective-C bridge
+pyobjc>=9.0
+pyobjc-framework-Cocoa>=9.0
+pyobjc-framework-UserNotifications>=9.0
+
+# Build tool for macOS apps
+py2app>=0.28
