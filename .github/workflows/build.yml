@@ -1,0 +1,46 @@
+# GitHub Actions Workflow for Linky
+# Note: macOS runners cost 10x more than Linux runners
+# This workflow only runs on releases to minimize costs
+
+name: Build Linky
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  build:
+    runs-on: macos-12
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Build Swift version
+      run: |
+        chmod +x build_scripts/build_swift.sh
+        ./build_scripts/build_swift.sh
+    
+    - name: Create DMG
+      run: |
+        chmod +x build_scripts/create_dmg.sh
+        ./build_scripts/create_dmg.sh
+    
+    - name: Upload DMG to Release
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./Linky-v2.0.0-macOS12+.dmg
+        asset_name: Linky-v2.0.0-macOS12+.dmg
+        asset_content_type: application/x-apple-diskimage
+    
+    - name: Upload artifact (for manual builds)
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linky-DMG
+        path: ./Linky-v*.dmg
