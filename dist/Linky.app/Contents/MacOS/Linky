@@ -1,0 +1,91 @@
+#!/bin/bash
+# Linky Launcher Script v2.0.1
+# Prüft Abhängigkeiten und startet die App
+
+APP_NAME="Linky"
+APP_VERSION="2.0.1"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+RESOURCES_DIR="$SCRIPT_DIR/../Resources"
+LOG_FILE="$HOME/Library/Logs/Linky.log"
+
+# Logging-Funktion
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
+    echo "$1"
+}
+
+# Dialog anzeigen
+show_dialog() {
+    osascript -e "display dialog \"$1\" buttons {\"$2\"} default button 1 with title \"$APP_NAME v$APP_VERSION\" with icon note"
+}
+
+show_error() {
+    osascript -e "display dialog \"$1\" buttons {\"OK\"} default button 1 with title \"$APP_NAME - Fehler\" with icon stop"
+}
+
+show_choice() {
+    osascript -e "display dialog \"$1\" buttons {\"$2\", \"$3\"} default button 1 with title \"$APP_NAME v$APP_VERSION\" with icon note"
+}
+
+# Log-Verzeichnis erstellen
+mkdir -p "$(dirname "$LOG_FILE")"
+log "$APP_NAME v$APP_VERSION wird gestartet..."
+
+# Python 3 prüfen
+PYTHON3=""
+for p in /usr/local/bin/python3 /opt/homebrew/bin/python3 /usr/bin/python3 python3; do
+    if command -v "$p" &>/dev/null; then
+        PYTHON3="$p"
+        break
+    fi
+done
+
+if [ -z "$PYTHON3" ]; then
+    log "FEHLER: Python 3 nicht gefunden"
+    show_error "Python 3 wurde nicht gefunden!\n\nBitte installieren Sie Python 3:\n1. Öffnen Sie Terminal\n2. Führen Sie aus: xcode-select --install\n\nOder laden Sie Python von:\nhttps://www.python.org/downloads/"
+    exit 1
+fi
+
+log "Python 3 gefunden: $PYTHON3"
+PYTHON_VERSION=$($PYTHON3 --version 2>&1)
+log "Version: $PYTHON_VERSION"
+
+# PyObjC prüfen
+check_pyobjc() {
+    $PYTHON3 -c "import objc; import AppKit; import Foundation" 2>/dev/null
+    return $?
+}
+
+if ! check_pyobjc; then
+    log "PyObjC nicht gefunden - zeige Installationsoptionen"
+    
+    RESULT=$(osascript -e 'display dialog "PyObjC ist nicht installiert.\n\nPyObjC wird benötigt, um Linky zu verwenden.\n\nMöchten Sie es jetzt automatisch installieren?" buttons {"Abbrechen", "Manuell", "Installieren"} default button "Installieren" with title "Linky v2.0.1 - Setup" with icon note' 2>&1)
+    
+    if [[ "$RESULT" == *"Installieren"* ]]; then
+        log "Starte automatische Installation..."
+        
+        # Installation im Terminal ausführen
+        osascript <<EOF
+tell application "Terminal"
+    activate
+    set newTab to do script "echo '========================================'; echo 'Linky - PyObjC Installation'; echo '========================================'; echo ''; pip3 install pyobjc && echo '' && echo '✅ Installation erfolgreich!' && echo 'Sie können das Terminal schließen und Linky erneut starten.' || echo '❌ Installation fehlgeschlagen. Versuchen Sie: pip3 install --user pyobjc'; read -p 'Drücken Sie Enter zum Schließen...'"
+end tell
+EOF
+        
+        show_dialog "Die Installation wurde im Terminal gestartet.\n\nBitte warten Sie, bis die Installation abgeschlossen ist, und starten Sie dann Linky erneut." "OK"
+        exit 0
+        
+    elif [[ "$RESULT" == *"Manuell"* ]]; then
+        show_dialog "Manuelle Installation:\n\n1. Öffnen Sie Terminal\n2. Führen Sie aus:\n   pip3 install pyobjc\n\n3. Starten Sie Linky erneut" "OK"
+        exit 0
+    else
+        log "Installation abgebrochen"
+        exit 1
+    fi
+fi
+
+log "PyObjC ist installiert - starte App"
+
+# Python-Script starten
+cd "$RESOURCES_DIR"
+exec $PYTHON3 "$RESOURCES_DIR/linky.py" 2>> "$LOG_FILE"

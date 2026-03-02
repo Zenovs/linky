@@ -1,0 +1,64 @@
+========================================
+  LINKY v2.0.1
+  SMB-Link Manager für macOS
+========================================
+
+📄 INHALT DIESER DMG
+---------------------
+• Linky.app          - Die Hauptanwendung
+• SMB-Link kopieren.workflow - Finder Schnellaktion
+• ERSTE_SCHRITTE.txt - Installationsanleitung
+• LIES_MICH.txt      - Diese Datei
+• TEST_CHECKLISTE.md - Für Tester
+
+
+🚀 SCHNELLSTART
+---------------
+1. Linky.app in Programme ziehen
+2. Linky starten
+3. Bei Bedarf: PyObjC installieren (Dialog erscheint)
+4. Optional: Workflow installieren (Doppelklick)
+
+
+📋 WAS IST LINKY?
+-----------------
+Linky ist eine macOS Menüleisten-App für schnellen
+Zugriff auf Netzwerkordner (SMB).
+
+Funktionen:
+• Rechtsklick → SMB-Link kopieren
+• Cmd+V → SMB-Link automatisch öffnen
+• Menüleisten-Integration
+• Autostart-Option
+• Automatische Updates
+
+
+⚙️ SYSTEMANFORDERUNGEN
+----------------------
+• macOS 12 (Monterey) oder neuer
+• Python 3.9+ (meist vorinstalliert)
+• PyObjC (wird bei Bedarf installiert)
+
+
+🔐 BERECHTIGUNGEN
+-----------------
+Beim ersten Start:
+• Sicherheitsdialog → "Trotzdem öffnen"
+• Bedienungshilfen → Linky erlauben
+
+
+📖 DOKUMENTATION
+----------------
+• ERSTE_SCHRITTE.txt - Detaillierte Anleitung
+• GitHub: github.com/Zenovs/linky
+
+
+🧪 TEST-VERSION
+---------------
+Dies ist Version 2.0.1 (Test).
+Bitte melden Sie Fehler auf GitHub!
+
+
+========================================
+  © 2024-2026 | github.com/Zenovs/linky
+========================================

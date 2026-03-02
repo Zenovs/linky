@@ -75,3 +75,8 @@ env/
 # Local configuration
 config.local.py
 .env.local
+# Build artifacts
+dmg_staging/
+*.tar.gz
+*.zip
+*.dmg

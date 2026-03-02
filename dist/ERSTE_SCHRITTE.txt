@@ -1,0 +1,129 @@
+========================================
+  LINKY v2.0.1 - ERSTE SCHRITTE
+  Schnelle SMB-Link Verwaltung für Mac
+========================================
+
+📋 INHALT
+---------
+1. Installation
+2. Erster Start
+3. Abhängigkeiten installieren
+4. Berechtigungen erteilen
+5. Verwendung
+6. Fehlerbehebung
+
+
+1️⃣ INSTALLATION
+================
+
+a) DMG öffnen:
+   - Doppelklicken Sie auf die DMG-Datei
+   - Das DMG-Image wird gemountet
+
+b) App installieren:
+   - Ziehen Sie "Linky.app" in Ihren Programme-Ordner
+   - Oder: Rechtsklick → "In Programme kopieren"
+
+c) Optional - Workflow installieren:
+   - Doppelklicken Sie auf "SMB-Link kopieren.workflow"
+   - Bestätigen Sie die Installation
+
+
+2️⃣ ERSTER START
+================
+
+a) Linky starten:
+   - Öffnen Sie den Programme-Ordner
+   - Doppelklicken Sie auf "Linky"
+   
+b) Sicherheitshinweis (beim ersten Start):
+   - macOS zeigt möglicherweise: "Linky kann nicht geöffnet werden"
+   - Lösung: Systemeinstellungen → Datenschutz & Sicherheit
+   - Scrollen Sie nach unten und klicken Sie "Trotzdem öffnen"
+
+c) Nach erfolgreichem Start:
+   - Ein 🔗 Symbol erscheint in der Menüleiste
+   - Die App läuft im Hintergrund
+
+
+3️⃣ ABHÄNGIGKEITEN INSTALLIEREN
+===============================
+
+Linky benötigt PyObjC (Python-Framework für macOS).
+
+Beim ersten Start wird automatisch geprüft:
+- Wenn PyObjC fehlt → Installationsdialog erscheint
+- Klicken Sie auf "Installieren" für automatische Installation
+
+Manuelle Installation (falls nötig):
+1. Terminal öffnen (Programme → Dienstprogramme → Terminal)
+2. Eingeben: pip3 install pyobjc
+3. Enter drücken und warten
+4. Linky erneut starten
+
+Alternativ für Apple Silicon Macs:
+   pip3 install --user pyobjc
+
+
+4️⃣ BERECHTIGUNGEN ERTEILEN
+===========================
+
+Für volle Funktionalität benötigt Linky:
+
+a) Bedienungshilfen (für Cmd+V Erkennung):
+   - Systemeinstellungen → Datenschutz & Sicherheit
+   - Bedienungshilfen
+   - "+" klicken → Linky hinzufügen ✅
+
+b) Mitteilungen (optional):
+   - Wird automatisch angefragt
+   - Erlauben Sie Mitteilungen für Status-Updates
+
+
+5️⃣ VERWENDUNG
+==============
+
+🔹 SMB-Link kopieren (mit Workflow):
+   - Rechtsklick auf Ordner im Finder
+   - "Schnellaktionen" → "SMB-Link kopieren"
+   - Der Link ist jetzt in der Zwischenablage
+
+🔹 SMB-Link automatisch öffnen:
+   - Kopieren Sie einen SMB-Link (smb://...)
+   - Drücken Sie Cmd+V
+   - Linky öffnet den Ordner automatisch im Finder
+
+🔹 Menüleisten-Optionen:
+   - Klicken Sie auf 🔗 in der Menüleiste
+   - Automatisches Öffnen ein/aus
+   - Bei Anmeldung starten
+   - Nach Updates suchen
+
+
+6️⃣ FEHLERBEHEBUNG
+==================
+
+❓ App startet nicht:
+   → Systemeinstellungen → Datenschutz & Sicherheit
+   → "Trotzdem öffnen" klicken
+
+❓ PyObjC-Fehler:
+   → Terminal öffnen
+   → pip3 install --upgrade pyobjc
+
+❓ Cmd+V funktioniert nicht:
+   → Bedienungshilfen-Berechtigung prüfen
+   → Linky neu starten
+
+❓ Symbol nicht in Menüleiste:
+   → App beenden und neu starten
+   → Logs prüfen: ~/Library/Logs/Linky.log
+
+❓ Weitere Hilfe:
+   → GitHub: https://github.com/Zenovs/linky
+   → Issues: https://github.com/Zenovs/linky/issues
+
+
+========================================
+  Viel Erfolg mit Linky! 🔗
+========================================
