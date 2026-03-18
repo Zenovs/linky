@@ -87,6 +87,13 @@ rm -rf build dist
 info "Building app with py2app..."
 python setup.py py2app
 
+# Replace launcher with our custom script (handles missing PyObjC automatically)
+if [[ -f "$PROJECT_DIR/src/launcher.sh" ]]; then
+    info "Installing custom launcher..."
+    cp "$PROJECT_DIR/src/launcher.sh" "$PROJECT_DIR/dist/Linky.app/Contents/MacOS/Linky"
+    chmod +x "$PROJECT_DIR/dist/Linky.app/Contents/MacOS/Linky"
+fi
+
 # Bundle workflow inside the app (enables auto-installation on first launch)
 WORKFLOW_SRC="$PROJECT_DIR/workflow/SMB-Link kopieren.workflow"
 APP_RESOURCES="$PROJECT_DIR/dist/Linky.app/Contents/Resources"

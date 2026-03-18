@@ -2,12 +2,6 @@
 # =============================================================================
 # Linky - Installer
 # =============================================================================
-# Installiert Linky automatisch:
-#   - Lädt die neueste Version herunter
-#   - Installiert die App nach /Applications
-#   - Entfernt den macOS Quarantine-Flag (verhindert Sicherheitswarnung)
-#   - Startet die App (Finder Quick Action wird automatisch eingerichtet)
-#
 # Verwendung:
 #   curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
 # =============================================================================
@@ -24,9 +18,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-info()  { echo -e "${GREEN}▶${NC} $1"; }
-warn()  { echo -e "${YELLOW}⚠${NC} $1"; }
-error() { echo -e "${RED}✖ Fehler:${NC} $1"; exit 1; }
+info()    { echo -e "${GREEN}▶${NC} $1"; }
+warn()    { echo -e "${YELLOW}⚠${NC} $1"; }
+error()   { echo -e "${RED}✖ Fehler:${NC} $1"; exit 1; }
 success() { echo -e "${GREEN}✔${NC} $1"; }
 
 echo ""
@@ -36,16 +30,67 @@ echo -e "${BLUE}╚════════════════════�
 echo ""
 
 # Systemcheck
-if [[ "$(uname)" != "Darwin" ]]; then
-    error "Linky läuft nur auf macOS."
-fi
+[[ "$(uname)" == "Darwin" ]] || error "Linky läuft nur auf macOS."
 
 MACOS_MAJOR=$(sw_vers -productVersion | cut -d. -f1)
-if [[ "$MACOS_MAJOR" -lt 12 ]]; then
-    error "macOS 12 (Monterey) oder neuer erforderlich."
+[[ "$MACOS_MAJOR" -ge 12 ]] || error "macOS 12 (Monterey) oder neuer erforderlich."
+
+# =============================================================================
+# Python & PyObjC installieren (benötigt für die Python-Version von Linky)
+# =============================================================================
+
+# Python 3 suchen
+PYTHON3=""
+for p in /usr/local/bin/python3 /opt/homebrew/bin/python3 /usr/bin/python3 python3; do
+    if command -v "$p" &>/dev/null; then
+        PYTHON3="$p"
+        break
+    fi
+done
+
+if [[ -z "$PYTHON3" ]]; then
+    warn "Python 3 nicht gefunden. Versuche Installation via Xcode Command Line Tools..."
+    xcode-select --install 2>/dev/null || true
+    # Nach Installation nochmal suchen
+    for p in /usr/bin/python3 python3; do
+        if command -v "$p" &>/dev/null; then
+            PYTHON3="$p"
+            break
+        fi
+    done
+    [[ -n "$PYTHON3" ]] || error "Python 3 konnte nicht gefunden/installiert werden.\nBitte installieren: https://www.python.org/downloads/"
+fi
+success "Python 3 gefunden: $($PYTHON3 --version)"
+
+# PyObjC prüfen und bei Bedarf installieren
+if ! $PYTHON3 -c "import objc, AppKit, Foundation" 2>/dev/null; then
+    info "Installiere PyObjC (Python-Abhängigkeit für Linky)..."
+    # pip ermitteln
+    PIP=""
+    for p in "$PYTHON3 -m pip" "pip3" "pip"; do
+        if eval "$p --version" &>/dev/null 2>&1; then
+            PIP="$p"
+            break
+        fi
+    done
+    if [[ -z "$PIP" ]]; then
+        # pip selbst installieren
+        info "Installiere pip..."
+        curl -fsSL https://bootstrap.pypa.io/get-pip.py | $PYTHON3 || error "pip konnte nicht installiert werden."
+        PIP="$PYTHON3 -m pip"
+    fi
+    eval "$PIP install --quiet --upgrade pyobjc" || \
+        eval "$PIP install --quiet --upgrade --user pyobjc" || \
+        error "PyObjC konnte nicht installiert werden.\nManuell: pip3 install pyobjc"
+    success "PyObjC installiert"
+else
+    success "PyObjC bereits installiert"
 fi
 
-# Neueste Version ermitteln
+# =============================================================================
+# Neueste Linky-Version herunterladen und installieren
+# =============================================================================
+
 info "Suche neueste Version..."
 API_RESPONSE=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null) || \
     error "GitHub API nicht erreichbar. Bitte Internetverbindung prüfen."
@@ -53,13 +98,8 @@ API_RESPONSE=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases/
 VERSION=$(echo "$API_RESPONSE" | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
 DMG_URL=$(echo "$API_RESPONSE" | grep '"browser_download_url"' | grep '\.dmg"' | sed 's/.*"browser_download_url": *"\([^"]*\)".*/\1/')
 
-if [[ -z "$VERSION" ]]; then
-    error "Keine Version gefunden. Bitte manuell von https://github.com/${GITHUB_REPO}/releases installieren."
-fi
-
-if [[ -z "$DMG_URL" ]]; then
-    error "Kein DMG-Download für Version ${VERSION} gefunden."
-fi
+[[ -n "$VERSION" ]] || error "Keine Version gefunden. Bitte manuell von https://github.com/${GITHUB_REPO}/releases installieren."
+[[ -n "$DMG_URL" ]] || error "Kein DMG-Download für Version ${VERSION} gefunden."
 
 info "Installiere Linky ${VERSION}..."
 
@@ -76,8 +116,7 @@ trap cleanup EXIT
 
 # DMG herunterladen
 info "Lade DMG herunter..."
-curl -fsSL --progress-bar "$DMG_URL" -o "$TMP_DMG" || \
-    error "Download fehlgeschlagen."
+curl -fsSL --progress-bar "$DMG_URL" -o "$TMP_DMG" || error "Download fehlgeschlagen."
 
 # DMG einhängen
 info "Öffne Installer-Image..."
@@ -85,9 +124,7 @@ hdiutil attach "$TMP_DMG" -mountpoint "$TMP_MOUNT" -quiet -nobrowse || \
     error "Konnte DMG nicht einhängen."
 
 # App kopieren
-if [[ ! -d "$TMP_MOUNT/${APP_NAME}.app" ]]; then
-    error "${APP_NAME}.app nicht im DMG gefunden."
-fi
+[[ -d "$TMP_MOUNT/${APP_NAME}.app" ]] || error "${APP_NAME}.app nicht im DMG gefunden."
 
 info "Installiere ${APP_NAME}.app nach ${INSTALL_DIR}..."
 if [[ -d "${INSTALL_DIR}/${APP_NAME}.app" ]]; then
