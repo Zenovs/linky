@@ -22,15 +22,26 @@
 
 ## 📥 Installation
 
-### Option 1: DMG herunterladen (empfohlen)
+### Option 1: Bash-Installer (empfohlen — ein Befehl, alles automatisch)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
+```
+
+Erledigt alles: Download, Installation, Quarantine-Flag entfernen, App starten und Finder Quick Action einrichten.
+
+### Option 2: DMG manuell herunterladen
 1. Lade die neueste [Linky-vX.X.X-macOS12+.dmg](https://github.com/Zenovs/linky/releases/latest) herunter
 2. Öffne die DMG-Datei
 3. Ziehe **Linky.app** in deinen **Programme**-Ordner
-4. Starte Linky aus dem Programme-Ordner
+4. Starte Linky — falls eine Sicherheitswarnung erscheint:
+   ```bash
+   xattr -rd com.apple.quarantine /Applications/Linky.app
+   ```
 
 > Der Finder Quick Action „SMB-Link kopieren" wird beim ersten Start automatisch installiert.
 
-### Option 2: Aus Quellcode bauen
+### Option 3: Aus Quellcode bauen
 Siehe [BUILD.md](docs/BUILD.md) für Anleitungen zum Kompilieren.
 
 ## 🎯 Verwendung
@@ -93,15 +104,26 @@ MIT License - Siehe [LICENSE](LICENSE) für Details.
 
 ## 📥 Installation
 
-### Option 1: Download DMG (recommended)
+### Option 1: Bash Installer (recommended — one command, fully automatic)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
+```
+
+Downloads, installs, removes the quarantine flag, and starts the app — all in one step.
+
+### Option 2: Download DMG manually
 1. Download the latest [Linky-vX.X.X-macOS12+.dmg](https://github.com/Zenovs/linky/releases/latest)
 2. Open the DMG file
 3. Drag **Linky.app** to your **Applications** folder
-4. Launch Linky from Applications
+4. Launch Linky — if a security warning appears:
+   ```bash
+   xattr -rd com.apple.quarantine /Applications/Linky.app
+   ```
 
 > The Finder Quick Action "SMB-Link kopieren" is installed automatically on first launch.
 
-### Option 2: Build from Source
+### Option 3: Build from Source
 See [BUILD.md](docs/BUILD.md) for compilation instructions.
 
 ## 🎯 Usage
