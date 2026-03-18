@@ -16,7 +16,7 @@ set -e
 
 # Configuration
 APP_NAME="Linky"
-VERSION="2.0.0"
+VERSION="2.1.0"
 DMG_NAME="Linky-v${VERSION}-macOS12+.dmg"
 VOLUME_NAME="Linky"
 
@@ -59,18 +59,9 @@ mkdir -p "$STAGING_DIR"
 info "Copying app bundle..."
 cp -R "$APP_PATH" "$STAGING_DIR/"
 
-# Copy workflow if exists
-if [[ -d "$WORKFLOW_DIR/SMB-Link kopieren.workflow" ]]; then
-    info "Copying workflow..."
-    cp -R "$WORKFLOW_DIR/SMB-Link kopieren.workflow" "$STAGING_DIR/"
-elif [[ -d "$PROJECT_DIR/SMB-Link kopieren.workflow" ]]; then
-    cp -R "$PROJECT_DIR/SMB-Link kopieren.workflow" "$STAGING_DIR/"
-fi
-
 # Create symlinks
 info "Creating symbolic links..."
 ln -s /Applications "$STAGING_DIR/Applications"
-ln -s ~/Library/Services "$STAGING_DIR/Workflow hier ablegen"
 
 # Create README
 info "Creating README..."
@@ -84,22 +75,15 @@ WILLKOMMEN BEI LINKY!
 Linky ist eine macOS Menu Bar App, die SMB-Links (Netzwerkfreigaben) handhabt.
 
 --------------------------------------------------------------------------------
-INSTALLATION
+INSTALLATION (nur 2 Schritte!)
 --------------------------------------------------------------------------------
 
-1. APP INSTALLIEREN:
-   Ziehe "Linky.app" in den "Applications" Ordner (Alias in diesem Fenster)
+1. Ziehe "Linky.app" in den "Applications" Ordner (Alias in diesem Fenster)
 
-2. WORKFLOW INSTALLIEREN (optional):
-   Ziehe "SMB-Link kopieren.workflow" in den "Workflow hier ablegen" Ordner
-   
-   Dieser Workflow fügt eine "SMB-Link kopieren" Option zum Rechtsklick-Menü
-   im Finder hinzu.
-
-3. APP STARTEN:
-   - Öffne Linky aus dem Programme-Ordner
+2. Starte Linky aus dem Programme-Ordner
    - Ein 🔗-Symbol erscheint in der Menüleiste
-   
+   - Der Finder Quick Action "SMB-Link kopieren" wird automatisch installiert
+
    Falls die App als "beschädigt" gemeldet wird:
    Rechtsklick auf die App -> "Öffnen" wählen
    ODER im Terminal: xattr -d com.apple.quarantine /Applications/Linky.app
@@ -109,6 +93,7 @@ FUNKTIONEN
 --------------------------------------------------------------------------------
 
 - SMB-Link kopieren: Rechtsklick -> Schnellaktionen -> SMB-Link kopieren
+  (wird beim ersten Start automatisch eingerichtet)
 - Auto-Open: SMB-Links aus der Zwischenablage werden automatisch geöffnet
 - Autostart: Optional beim Anmelden starten
 - Auto-Update: Prüft automatisch auf neue Versionen

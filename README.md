@@ -26,8 +26,9 @@
 1. Lade die neueste [Linky-vX.X.X-macOS12+.dmg](https://github.com/Zenovs/linky/releases/latest) herunter
 2. Öffne die DMG-Datei
 3. Ziehe **Linky.app** in deinen **Programme**-Ordner
-4. Ziehe **SMB-Link kopieren.workflow** in **~/Library/Services**
-5. Starte Linky aus dem Programme-Ordner
+4. Starte Linky aus dem Programme-Ordner
+
+> Der Finder Quick Action „SMB-Link kopieren" wird beim ersten Start automatisch installiert.
 
 ### Option 2: Aus Quellcode bauen
 Siehe [BUILD.md](docs/BUILD.md) für Anleitungen zum Kompilieren.
@@ -96,8 +97,9 @@ MIT License - Siehe [LICENSE](LICENSE) für Details.
 1. Download the latest [Linky-vX.X.X-macOS12+.dmg](https://github.com/Zenovs/linky/releases/latest)
 2. Open the DMG file
 3. Drag **Linky.app** to your **Applications** folder
-4. Drag **SMB-Link kopieren.workflow** to **~/Library/Services**
-5. Launch Linky from Applications
+4. Launch Linky from Applications
+
+> The Finder Quick Action "SMB-Link kopieren" is installed automatically on first launch.
 
 ### Option 2: Build from Source
 See [BUILD.md](docs/BUILD.md) for compilation instructions.

@@ -16,7 +16,7 @@ set -e
 
 # Configuration
 APP_NAME="Linky"
-VERSION="2.0.0"
+VERSION="2.1.0"
 BUNDLE_ID="com.linky.app"
 MIN_MACOS="12.0"
 
@@ -104,6 +104,15 @@ if [[ -f "$PROJECT_DIR/Resources/AppIcon.png" ]]; then
     cp "$PROJECT_DIR/Resources/AppIcon.png" "$APP_BUNDLE/Contents/Resources/"
 else
     warn "AppIcon.png not found in Resources/"
+fi
+
+# Bundle workflow inside the app (enables auto-installation on first launch)
+WORKFLOW_SRC="$PROJECT_DIR/workflow/SMB-Link kopieren.workflow"
+if [[ -d "$WORKFLOW_SRC" ]]; then
+    info "Bundling workflow into app resources..."
+    cp -R "$WORKFLOW_SRC" "$APP_BUNDLE/Contents/Resources/"
+else
+    warn "Workflow not found at $WORKFLOW_SRC — skipping"
 fi
 
 # Ad-hoc code sign

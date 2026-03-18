@@ -87,6 +87,16 @@ rm -rf build dist
 info "Building app with py2app..."
 python setup.py py2app
 
+# Bundle workflow inside the app (enables auto-installation on first launch)
+WORKFLOW_SRC="$PROJECT_DIR/workflow/SMB-Link kopieren.workflow"
+APP_RESOURCES="$PROJECT_DIR/dist/Linky.app/Contents/Resources"
+if [[ -d "$WORKFLOW_SRC" ]]; then
+    info "Bundling workflow into app resources..."
+    cp -R "$WORKFLOW_SRC" "$APP_RESOURCES/"
+else
+    warn "Workflow not found at $WORKFLOW_SRC — skipping"
+fi
+
 info "Build complete!"
 info "App bundle: dist/Linky.app"
 info ""

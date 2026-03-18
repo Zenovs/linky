@@ -11,7 +11,7 @@ import UserNotifications
 // MARK: - Configuration
 
 let appName = "Linky"
-let appVersion = "2.0.0"
+let appVersion = "2.1.0"
 let bundleId = "com.linky.app"
 let githubRepo = "Zenovs/linky"
 let githubAPIURL = "https://api.github.com/repos/\(githubRepo)/releases/latest"
@@ -36,6 +36,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private let lastUpdateCheckKey = "LastUpdateCheck"
     private let skippedVersionKey = "SkippedVersion"
     private let launchAgentLabel = "com.linky.autostart"
+    private let workflowName = "SMB-Link kopieren.workflow"
     
     // Update check interval (24 hours)
     private let updateCheckInterval: TimeInterval = 24 * 60 * 60
@@ -70,6 +71,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Store current pasteboard count
         lastPasteboardCount = NSPasteboard.general.changeCount
         
+        // Install workflow automatically on first launch
+        installWorkflowIfNeeded()
+
         // Check for updates on startup
         if shouldCheckAutomatically() {
             checkForUpdates(showNoUpdateMessage: false)
@@ -201,6 +205,51 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         statusItem.menu = menu
     }
     
+    // MARK: - Workflow Auto-Installation
+
+    private func installWorkflowIfNeeded() {
+        let servicesDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Services")
+        let destPath = servicesDir.appendingPathComponent(workflowName)
+
+        // Skip if workflow already installed
+        if FileManager.default.fileExists(atPath: destPath.path) {
+            NSLog("Workflow already installed at \(destPath.path)")
+            return
+        }
+
+        // Find workflow bundled inside the app
+        guard let resourcePath = Bundle.main.resourcePath else {
+            NSLog("Could not find app bundle resources")
+            return
+        }
+        let sourcePath = URL(fileURLWithPath: resourcePath).appendingPathComponent(workflowName)
+
+        guard FileManager.default.fileExists(atPath: sourcePath.path) else {
+            NSLog("Workflow not found in app bundle at \(sourcePath.path)")
+            return
+        }
+
+        do {
+            try FileManager.default.createDirectory(at: servicesDir, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: sourcePath, to: destPath)
+            NSLog("Workflow installed to \(destPath.path)")
+
+            // Refresh macOS services database
+            let task = Process()
+            task.launchPath = "/bin/bash"
+            task.arguments = ["-c", "/System/Library/CoreServices/pbs -update 2>/dev/null; true"]
+            try? task.run()
+
+            showNotification(
+                title: appName,
+                message: "Quick Action 'SMB-Link kopieren' wurde installiert. Im Finder per Rechtsklick → Schnellaktionen verfügbar."
+            )
+        } catch {
+            NSLog("Error installing workflow: \(error)")
+        }
+    }
+
     // MARK: - Update Checking
     
     private func setupUpdateTimer() {

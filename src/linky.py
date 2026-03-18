@@ -58,7 +58,7 @@ except ImportError:
 
 # Constants
 APP_NAME = "Linky"
-APP_VERSION = "2.0.1"
+APP_VERSION = "2.1.0"
 BUNDLE_ID = "com.linky.app"
 GITHUB_REPO = "Zenovs/linky"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -78,6 +78,44 @@ UPDATE_CHECK_INTERVAL = 24 * 60 * 60
 HOME_DIR = Path.home()
 LAUNCH_AGENTS_DIR = HOME_DIR / "Library" / "LaunchAgents"
 LAUNCH_AGENT_PLIST = LAUNCH_AGENTS_DIR / f"{LAUNCH_AGENT_LABEL}.plist"
+WORKFLOW_NAME = "SMB-Link kopieren.workflow"
+SERVICES_DIR = HOME_DIR / "Library" / "Services"
+
+
+def install_workflow_if_needed():
+    """Copy the bundled workflow to ~/Library/Services/ on first launch."""
+    dest = SERVICES_DIR / WORKFLOW_NAME
+    if dest.exists():
+        NSLog("Workflow already installed")
+        return
+
+    bundle = NSBundle.mainBundle()
+    resource_path = bundle.resourcePath()
+    if not resource_path:
+        NSLog("Could not locate app bundle resources")
+        return
+
+    source = Path(resource_path) / WORKFLOW_NAME
+    if not source.exists():
+        NSLog(f"Workflow not found in bundle at {source}")
+        return
+
+    try:
+        import shutil
+        SERVICES_DIR.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(str(source), str(dest))
+        NSLog(f"Workflow installed to {dest}")
+        subprocess.run(
+            ["/bin/bash", "-c", "/System/Library/CoreServices/pbs -update 2>/dev/null; true"],
+            check=False
+        )
+        NotificationManager.show(
+            APP_NAME,
+            "Quick Action 'SMB-Link kopieren' wurde installiert. Im Finder per Rechtsklick → Schnellaktionen verfügbar.",
+            "workflow-install"
+        )
+    except Exception as e:
+        NSLog(f"Error installing workflow: {e}")
 
 
 class VersionCompare:
@@ -487,6 +525,9 @@ class AppDelegate(NSObject):
         # Store current pasteboard count
         self.lastPasteboardCount = NSPasteboard.generalPasteboard().changeCount()
         
+        # Install workflow automatically on first launch
+        install_workflow_if_needed()
+
         # Check for updates on startup
         if UpdateChecker.should_check_automatically():
             UpdateChecker.check_for_updates()

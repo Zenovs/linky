@@ -7,6 +7,17 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [2.1.0] - 2026-03-18
+
+### Hinzugefügt
+- 🆕 **Automatische Workflow-Installation**: Der Finder Quick Action "SMB-Link kopieren" wird beim ersten App-Start automatisch in `~/Library/Services/` installiert – kein manuelles Drag & Drop mehr nötig
+
+### Verbessert
+- ✨ DMG enthält nur noch die App (kein separater Workflow-Schritt)
+- ✨ Installation vereinfacht: Download → App in Programme → Starten – fertig
+
+---
+
 ## [2.0.0] - 2026-03-02
 
 ### Hinzugefügt
