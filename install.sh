@@ -49,16 +49,36 @@ for p in /usr/local/bin/python3 /opt/homebrew/bin/python3 /usr/bin/python3 pytho
 done
 
 if [[ -z "$PYTHON3" ]]; then
-    warn "Python 3 nicht gefunden. Versuche Installation via Xcode Command Line Tools..."
+    warn "Python 3 nicht gefunden. Starte Installation der Xcode Command Line Tools..."
     xcode-select --install 2>/dev/null || true
-    # Nach Installation nochmal suchen
-    for p in /usr/bin/python3 python3; do
+
+    echo ""
+    echo -e "${YELLOW}  Ein Dialogfenster wurde geöffnet.${NC}"
+    echo -e "${YELLOW}  Bitte klicken Sie auf 'Installieren' und warten Sie, bis${NC}"
+    echo -e "${YELLOW}  die Installation abgeschlossen ist.${NC}"
+    echo ""
+    echo -n "  Warte auf Python 3"
+
+    # Warten bis Python nach CLT-Installation verfügbar ist (max. 10 Minuten)
+    WAITED=0
+    until command -v /usr/bin/python3 &>/dev/null || command -v python3 &>/dev/null; do
+        sleep 5
+        WAITED=$((WAITED + 5))
+        echo -n "."
+        if [[ $WAITED -ge 600 ]]; then
+            echo ""
+            error "Timeout: Python 3 nach 10 Minuten nicht gefunden.\nBitte installieren: https://www.python.org/downloads/"
+        fi
+    done
+    echo ""
+
+    for p in /usr/bin/python3 /usr/local/bin/python3 python3; do
         if command -v "$p" &>/dev/null; then
             PYTHON3="$p"
             break
         fi
     done
-    [[ -n "$PYTHON3" ]] || error "Python 3 konnte nicht gefunden/installiert werden.\nBitte installieren: https://www.python.org/downloads/"
+    [[ -n "$PYTHON3" ]] || error "Python 3 konnte nicht gefunden werden.\nBitte installieren: https://www.python.org/downloads/"
 fi
 success "Python 3 gefunden: $($PYTHON3 --version)"
 
