@@ -27,7 +27,7 @@ NC='\033[0m'
 info()  { echo -e "${GREEN}▶${NC} $1"; }
 warn()  { echo -e "${YELLOW}⚠${NC} $1"; }
 error() { echo -e "${RED}✖ Fehler:${NC} $1"; exit 1; }
-done()  { echo -e "${GREEN}✔${NC} $1"; }
+success() { echo -e "${GREEN}✔${NC} $1"; }
 
 echo ""
 echo -e "${BLUE}╔══════════════════════════════════╗${NC}"
@@ -100,7 +100,7 @@ cp -R "$TMP_MOUNT/${APP_NAME}.app" "$INSTALL_DIR/"
 info "Entferne macOS Sicherheitssperre (Quarantine)..."
 xattr -rd com.apple.quarantine "${INSTALL_DIR}/${APP_NAME}.app" 2>/dev/null || true
 
-done "Linky ${VERSION} erfolgreich installiert!"
+success "Linky ${VERSION} erfolgreich installiert!"
 echo ""
 echo -e "  ${GREEN}→${NC} App: ${INSTALL_DIR}/${APP_NAME}.app"
 echo -e "  ${GREEN}→${NC} Finder Quick Action wird beim ersten Start automatisch eingerichtet"
