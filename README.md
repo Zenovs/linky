@@ -6,13 +6,25 @@
 
 ---
 
+## ⚡ Installation — ein Befehl
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
+```
+
+> Lädt die neueste Version herunter, installiert sie in `/Applications`, entfernt das Quarantine-Flag und startet die App.
+
+---
+
 ## ✨ Features
 
-- **🖱️ Rechtsklick-Integration**: SMB-Links mit einem Klick kopieren
-- **📋 Automatisches Öffnen**: SMB-Links aus der Zwischenablage werden automatisch geöffnet
-- **📊 Menu Bar**: Unauffällige Integration in der macOS-Menüleiste
-- **🚀 Autostart**: Optionaler Start beim Anmelden
-- **🔄 Auto-Update**: Automatische Prüfung auf neue Versionen via GitHub Releases
+- **🖱️ Rechtsklick → SMB-Link kopieren** — SMB-Pfad einer Datei/Ordner in die Zwischenablage
+- **🖱️ Rechtsklick → SMB-Link öffnen** — SMB-Pfad direkt im Finder öffnen
+- **🌐 Browser/Mail → Dienste → Linky → SMB-Link öffnen** — markierten SMB-Link öffnen
+- **📋 Automatisches Öffnen** — SMB-Links beim Einfügen (Cmd+V) automatisch öffnen
+- **📊 Menu Bar** — Unauffällige Integration in der macOS-Menüleiste
+- **🚀 Autostart** — Optionaler Start beim Anmelden
+- **🔄 Auto-Update** — Automatische Prüfung auf neue Versionen
 
 ## 📸 Screenshots
 
@@ -20,73 +32,62 @@
 |----------|---------------|
 | ![Menu Bar](docs/screenshots/menubar.png) | ![Settings](docs/screenshots/settings.png) |
 
-## 📥 Installation
+## 📥 Weitere Installationsmethoden
 
-### Option 1: Bash-Installer (empfohlen — ein Befehl, alles automatisch)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
-```
-
-Erledigt alles: Download, Installation, Quarantine-Flag entfernen, App starten und Finder Quick Action einrichten.
-
-### Option 2: DMG manuell herunterladen
+### DMG manuell herunterladen
 1. Lade die neueste [Linky-vX.X.X-macOS12+.dmg](https://github.com/Zenovs/linky/releases/latest) herunter
-2. Öffne die DMG-Datei
-3. Ziehe **Linky.app** in deinen **Programme**-Ordner
-4. Starte Linky — falls eine Sicherheitswarnung erscheint:
+2. Öffne die DMG-Datei und ziehe **Linky.app** in den **Programme**-Ordner
+3. Falls eine Sicherheitswarnung erscheint:
    ```bash
    xattr -rd com.apple.quarantine /Applications/Linky.app
    ```
 
-> Der Finder Quick Action „SMB-Link kopieren" wird beim ersten Start automatisch installiert.
-
-### Option 3: Aus Quellcode bauen
-Siehe [BUILD.md](docs/BUILD.md) für Anleitungen zum Kompilieren.
+### Aus Quellcode bauen
+Siehe [BUILD.md](docs/BUILD.md).
 
 ## 🎯 Verwendung
 
-### SMB-Link kopieren (Workflow)
+### SMB-Link kopieren (Finder)
 1. Rechtsklick auf eine Datei/Ordner im Finder
-2. Wähle **Schnellaktionen** → **SMB-Link kopieren**
-3. Der SMB-Link ist nun in der Zwischenablage
+2. **Schnellaktionen** → **SMB-Link kopieren**
+3. SMB-Link ist in der Zwischenablage
 
-### Automatisches Öffnen (App)
-1. Kopiere einen SMB-Link (z.B. `smb://server/freigabe/ordner`)
+### SMB-Link öffnen (Finder)
+1. Rechtsklick auf eine Datei/Ordner im Finder
+2. **Schnellaktionen** → **SMB-Link öffnen**
+3. Finder öffnet die Netzwerkfreigabe direkt
+
+### SMB-Link öffnen (Browser, Mail, überall)
+1. SMB-Link im Text markieren (z.B. `smb://server/freigabe/ordner`)
+2. Rechtsklick → **Dienste** → **Linky** → **SMB-Link öffnen**
+
+### Automatisches Öffnen
+1. Kopiere einen SMB-Link
 2. Drücke **Cmd+V** irgendwo
 3. Linky öffnet automatisch den Netzwerkpfad im Finder
 
-### Einstellungen
-Klicke auf das 🔗-Symbol in der Menüleiste:
-- **Automatisches Öffnen**: SMB-Links beim Einfügen öffnen
-- **Bei Anmeldung starten**: App automatisch starten
-- **Nach Updates suchen**: Automatische Update-Prüfung
+### Quick Actions aktivieren (einmalig)
+Beim ersten Start erscheint ein Dialog. Klick auf **„Einstellungen öffnen"** → alle drei Einträge aktivieren.
 
 ## 💻 Systemanforderungen
 
 - macOS 12 (Monterey) oder neuer
 - ~10 MB Speicherplatz
-- Für die Swift-Version: Keine zusätzlichen Abhängigkeiten
-- Für die Python-Version: Python 3.9+ mit PyObjC
+- Keine zusätzlichen Abhängigkeiten
 
 ## 🔧 Berechtigungen
 
-Linky benötigt folgende Berechtigungen:
-- **Bedienungshilfen**: Zum Erkennen von Cmd+V
-- **Mitteilungen**: Für Status-Benachrichtigungen
-- **AppleEvents**: Zum Öffnen von SMB-Freigaben im Finder
+- **Bedienungshilfen** — Erkennen von Cmd+V
+- **Mitteilungen** — Status-Benachrichtigungen
+- **AppleEvents** — Öffnen von SMB-Freigaben im Finder
 
 ## 📝 Changelog
 
-Siehe [CHANGELOG.md](CHANGELOG.md) für die vollständige Versionshistorie.
-
-## 🤝 Mitwirken
-
-Beiträge sind willkommen! Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für Details.
+Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## 📄 Lizenz
 
-MIT License - Siehe [LICENSE](LICENSE) für Details.
+MIT License — Siehe [LICENSE](LICENSE).
 
 ---
 
@@ -94,71 +95,81 @@ MIT License - Siehe [LICENSE](LICENSE) für Details.
 
 **Linky** is a lightweight macOS menu bar app that seamlessly handles SMB links (network shares).
 
-## ✨ Features
+---
 
-- **🖱️ Right-click Integration**: Copy SMB links with one click
-- **📋 Auto-Open**: SMB links from clipboard are automatically opened
-- **📊 Menu Bar**: Unobtrusive integration in macOS menu bar
-- **🚀 Autostart**: Optional launch at login
-- **🔄 Auto-Update**: Automatic check for new versions via GitHub Releases
-
-## 📥 Installation
-
-### Option 1: Bash Installer (recommended — one command, fully automatic)
+## ⚡ Install — one command
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
 ```
 
-Downloads, installs, removes the quarantine flag, and starts the app — all in one step.
+> Downloads the latest release, installs to `/Applications`, removes the quarantine flag, and launches the app.
 
-### Option 2: Download DMG manually
+---
+
+## ✨ Features
+
+- **🖱️ Right-click → Copy SMB Link** — copy a file's SMB path to clipboard
+- **🖱️ Right-click → Open SMB Link** — open SMB path directly in Finder
+- **🌐 Browser/Mail → Services → Linky → Open SMB Link** — open selected SMB URL
+- **📋 Auto-Open** — automatically open SMB links when pasting (Cmd+V)
+- **📊 Menu Bar** — unobtrusive integration in the macOS menu bar
+- **🚀 Autostart** — optional launch at login
+- **🔄 Auto-Update** — automatic check for new versions
+
+## 📥 Other Installation Methods
+
+### Download DMG manually
 1. Download the latest [Linky-vX.X.X-macOS12+.dmg](https://github.com/Zenovs/linky/releases/latest)
-2. Open the DMG file
-3. Drag **Linky.app** to your **Applications** folder
-4. Launch Linky — if a security warning appears:
+2. Open the DMG and drag **Linky.app** to **Applications**
+3. If a security warning appears:
    ```bash
    xattr -rd com.apple.quarantine /Applications/Linky.app
    ```
 
-> The Finder Quick Action "SMB-Link kopieren" is installed automatically on first launch.
-
-### Option 3: Build from Source
-See [BUILD.md](docs/BUILD.md) for compilation instructions.
+### Build from Source
+See [BUILD.md](docs/BUILD.md).
 
 ## 🎯 Usage
 
-### Copy SMB Link (Workflow)
-1. Right-click on a file/folder in Finder
-2. Select **Quick Actions** → **SMB-Link kopieren**
-3. The SMB link is now in your clipboard
+### Copy SMB Link (Finder)
+1. Right-click a file/folder in Finder
+2. **Quick Actions** → **SMB-Link kopieren**
+3. SMB link is now in clipboard
 
-### Auto-Open (App)
-1. Copy an SMB link (e.g., `smb://server/share/folder`)
+### Open SMB Link (Finder)
+1. Right-click a file/folder in Finder
+2. **Quick Actions** → **SMB-Link öffnen**
+3. Finder opens the network share directly
+
+### Open SMB Link (Browser, Mail, anywhere)
+1. Select an SMB link text (e.g. `smb://server/share/folder`)
+2. Right-click → **Services** → **Linky** → **SMB-Link öffnen**
+
+### Auto-Open
+1. Copy an SMB link
 2. Press **Cmd+V** anywhere
 3. Linky automatically opens the network path in Finder
 
-### Settings
-Click the 🔗 icon in the menu bar:
-- **Automatisches Öffnen**: Open SMB links when pasting
-- **Bei Anmeldung starten**: Auto-start app
-- **Nach Updates suchen**: Automatic update checking
+### Enable Quick Actions (once)
+On first launch a dialog appears. Click **"Open Settings"** → enable all three entries.
 
 ## 💻 System Requirements
 
 - macOS 12 (Monterey) or newer
 - ~10 MB disk space
-- For Swift version: No additional dependencies
-- For Python version: Python 3.9+ with PyObjC
+- No additional dependencies
+
+## 🔧 Permissions
+
+- **Accessibility** — detect Cmd+V
+- **Notifications** — status notifications
+- **AppleEvents** — open SMB shares in Finder
 
 ## 📝 Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the full version history.
-
-## 🤝 Contributing
-
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) for details.
+MIT License — See [LICENSE](LICENSE).

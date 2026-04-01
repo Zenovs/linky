@@ -80,3 +80,6 @@ dmg_staging/
 *.tar.gz
 *.zip
 *.dmg
+
+# Claude Code memory
+.claude/

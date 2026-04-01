@@ -36,7 +36,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private let lastUpdateCheckKey = "LastUpdateCheck"
     private let skippedVersionKey = "SkippedVersion"
     private let launchAgentLabel = "com.linky.autostart"
-    private let workflowName = "SMB-Link kopieren.workflow"
+    private let workflowNames = ["SMB-Link kopieren.workflow", "SMB-Link öffnen.workflow"]
     
     // Update check interval (24 hours)
     private let updateCheckInterval: TimeInterval = 24 * 60 * 60
@@ -210,43 +210,84 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func installWorkflowIfNeeded() {
         let servicesDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Services")
-        let destPath = servicesDir.appendingPathComponent(workflowName)
-
-        // Skip if workflow already installed
-        if FileManager.default.fileExists(atPath: destPath.path) {
-            NSLog("Workflow already installed at \(destPath.path)")
-            return
-        }
-
-        // Find workflow bundled inside the app
         guard let resourcePath = Bundle.main.resourcePath else {
             NSLog("Could not find app bundle resources")
             return
         }
-        let sourcePath = URL(fileURLWithPath: resourcePath).appendingPathComponent(workflowName)
 
-        guard FileManager.default.fileExists(atPath: sourcePath.path) else {
-            NSLog("Workflow not found in app bundle at \(sourcePath.path)")
-            return
+        var anyInstalled = false
+        var refreshNeeded = false
+
+        for name in workflowNames {
+            let destPath = servicesDir.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: destPath.path) {
+                NSLog("Workflow already installed: \(name)")
+                anyInstalled = true
+                continue
+            }
+            let sourcePath = URL(fileURLWithPath: resourcePath).appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: sourcePath.path) else {
+                NSLog("Workflow not found in app bundle: \(name)")
+                continue
+            }
+            do {
+                try FileManager.default.createDirectory(at: servicesDir, withIntermediateDirectories: true)
+                try FileManager.default.copyItem(at: sourcePath, to: destPath)
+                NSLog("Workflow installed: \(destPath.path)")
+                anyInstalled = true
+                refreshNeeded = true
+            } catch {
+                NSLog("Error installing workflow \(name): \(error)")
+            }
         }
 
-        do {
-            try FileManager.default.createDirectory(at: servicesDir, withIntermediateDirectories: true)
-            try FileManager.default.copyItem(at: sourcePath, to: destPath)
-            NSLog("Workflow installed to \(destPath.path)")
-
-            // Refresh macOS services database
+        if refreshNeeded {
             let task = Process()
             task.launchPath = "/bin/bash"
             task.arguments = ["-c", "/System/Library/CoreServices/pbs -update 2>/dev/null; true"]
             try? task.run()
+        }
 
-            showNotification(
-                title: appName,
-                message: "Quick Action 'SMB-Link kopieren' wurde installiert. Im Finder per Rechtsklick → Schnellaktionen verfügbar."
-            )
-        } catch {
-            NSLog("Error installing workflow: \(error)")
+        if anyInstalled {
+            // On macOS 13+, Quick Actions must be enabled by the user in Extensions settings.
+            promptUserToEnableQuickAction()
+        }
+    }
+
+    private func promptUserToEnableQuickAction() {
+        let promptedKey = "WorkflowActivationPrompted"
+        guard !UserDefaults.standard.bool(forKey: promptedKey) else { return }
+        UserDefaults.standard.set(true, forKey: promptedKey)
+
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Quick Actions aktivieren"
+            alert.informativeText = """
+            Drei Dienste wurden installiert:
+            • „SMB-Link kopieren" – kopiert den SMB-Pfad einer Datei (Finder)
+            • „SMB-Link öffnen" – öffnet den SMB-Pfad direkt im Finder (Finder)
+            • „Linky → SMB-Link öffnen" – öffnet markierten SMB-Link (Browser, Mail, überall)
+
+            Damit sie erscheinen, musst du sie einmalig freigeben:
+
+            1. Klicke auf „Einstellungen öffnen"
+            2. Aktiviere alle drei Einträge in der Liste
+
+            Finder: Rechtsklick → Schnellaktionen
+            Browser/Mail: Rechtsklick → Dienste → Linky → SMB-Link öffnen
+            """
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Einstellungen öffnen")
+            alert.addButton(withTitle: "Später")
+
+            NSApp.activate(ignoringOtherApps: true)
+            let response = alert.runModal()
+
+            if response == .alertFirstButtonReturn {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.ExtensionsPreferences") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
         }
     }
 

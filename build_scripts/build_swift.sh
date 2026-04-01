@@ -58,14 +58,26 @@ rm -rf "$APP_BUNDLE"
 info "Compiling Swift sources..."
 cd "$SWIFT_DIR"
 
-# Build for both architectures (Universal Binary)
-swiftc -o "$OUTPUT_DIR/$APP_NAME" \
+# Build Universal Binary (arm64 + x86_64)
+swiftc -o "$OUTPUT_DIR/${APP_NAME}_arm64" \
     -target arm64-apple-macos$MIN_MACOS \
+    -O \
+    -framework Cocoa \
+    -framework UserNotifications \
+    AppDelegate.swift main.swift
+
+swiftc -o "$OUTPUT_DIR/${APP_NAME}_x86_64" \
     -target x86_64-apple-macos$MIN_MACOS \
     -O \
     -framework Cocoa \
     -framework UserNotifications \
     AppDelegate.swift main.swift
+
+lipo -create -output "$OUTPUT_DIR/$APP_NAME" \
+    "$OUTPUT_DIR/${APP_NAME}_arm64" \
+    "$OUTPUT_DIR/${APP_NAME}_x86_64"
+
+rm "$OUTPUT_DIR/${APP_NAME}_arm64" "$OUTPUT_DIR/${APP_NAME}_x86_64"
 
 # Create app bundle structure
 info "Creating app bundle..."
@@ -106,14 +118,15 @@ else
     warn "AppIcon.png not found in Resources/"
 fi
 
-# Bundle workflow inside the app (enables auto-installation on first launch)
-WORKFLOW_SRC="$PROJECT_DIR/workflow/SMB-Link kopieren.workflow"
-if [[ -d "$WORKFLOW_SRC" ]]; then
-    info "Bundling workflow into app resources..."
-    cp -R "$WORKFLOW_SRC" "$APP_BUNDLE/Contents/Resources/"
-else
-    warn "Workflow not found at $WORKFLOW_SRC — skipping"
-fi
+# Bundle all workflows inside the app (enables auto-installation on first launch)
+info "Bundling workflows into app resources..."
+for WORKFLOW_SRC in "$PROJECT_DIR/workflow/"*.workflow; do
+    if [[ -d "$WORKFLOW_SRC" ]]; then
+        WORKFLOW_NAME=$(basename "$WORKFLOW_SRC")
+        cp -R "$WORKFLOW_SRC" "$APP_BUNDLE/Contents/Resources/"
+        info "  Bundled: $WORKFLOW_NAME"
+    fi
+done
 
 # Ad-hoc code sign
 info "Signing app bundle..."
