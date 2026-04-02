@@ -16,7 +16,7 @@ set -e
 
 # Configuration
 APP_NAME="Linky"
-VERSION="2.1.0"
+VERSION="2.2.0"
 DMG_NAME="Linky-v${VERSION}-macOS12+.dmg"
 VOLUME_NAME="Linky"
 

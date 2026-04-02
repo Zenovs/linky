@@ -11,7 +11,7 @@ import UserNotifications
 // MARK: - Configuration
 
 let appName = "Linky"
-let appVersion = "2.1.0"
+let appVersion = "2.2.0"
 let bundleId = "com.linky.app"
 let githubRepo = "Zenovs/linky"
 let githubAPIURL = "https://api.github.com/repos/\(githubRepo)/releases/latest"
@@ -260,31 +260,53 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         UserDefaults.standard.set(true, forKey: promptedKey)
 
         DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "Quick Actions aktivieren"
-            alert.informativeText = """
-            Drei Dienste wurden installiert:
-            • „SMB-Link kopieren" – kopiert den SMB-Pfad einer Datei (Finder)
-            • „SMB-Link öffnen" – öffnet den SMB-Pfad direkt im Finder (Finder)
-            • „Linky → SMB-Link öffnen" – öffnet markierten SMB-Link (Browser, Mail, überall)
+            // Step 1: Finder Quick Actions (Extensions)
+            let alert1 = NSAlert()
+            alert1.messageText = "Schritt 1 von 2: Finder-Aktionen aktivieren"
+            alert1.informativeText = """
+            Zwei Quick Actions für den Finder wurden installiert:
+            • „SMB-Link kopieren" – SMB-Pfad in Zwischenablage
+            • „SMB-Link öffnen" – Netzwerkpfad direkt öffnen
 
-            Damit sie erscheinen, musst du sie einmalig freigeben:
+            Erscheinen im Finder unter: Rechtsklick → Schnellaktionen
 
-            1. Klicke auf „Einstellungen öffnen"
-            2. Aktiviere alle drei Einträge in der Liste
-
-            Finder: Rechtsklick → Schnellaktionen
-            Browser/Mail: Rechtsklick → Dienste → Linky → SMB-Link öffnen
+            Klicke auf „Öffnen" und aktiviere beide Einträge in der Liste.
             """
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "Einstellungen öffnen")
-            alert.addButton(withTitle: "Später")
+            alert1.alertStyle = .informational
+            alert1.addButton(withTitle: "Öffnen")
+            alert1.addButton(withTitle: "Überspringen")
 
             NSApp.activate(ignoringOtherApps: true)
-            let response = alert.runModal()
-
-            if response == .alertFirstButtonReturn {
+            let r1 = alert1.runModal()
+            if r1 == .alertFirstButtonReturn {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.ExtensionsPreferences") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+
+            // Brief pause, then Step 2
+            Thread.sleep(forTimeInterval: 0.5)
+
+            // Step 2: Text Services (Keyboard Shortcuts) – for browsers
+            let alert2 = NSAlert()
+            alert2.messageText = "Schritt 2 von 2: Browser-Dienst aktivieren"
+            alert2.informativeText = """
+            Ein Dienst für Browser, Mail und alle anderen Apps wurde installiert:
+            • „Linky → SMB-Link öffnen" – markierten SMB-Link öffnen
+
+            Erscheint in: Rechtsklick → Dienste → Linky → SMB-Link öffnen
+
+            Klicke auf „Öffnen", gehe zu „Dienste" → scrolle zu „Text"
+            und aktiviere „SMB-Link öffnen".
+            """
+            alert2.alertStyle = .informational
+            alert2.addButton(withTitle: "Öffnen")
+            alert2.addButton(withTitle: "Überspringen")
+
+            NSApp.activate(ignoringOtherApps: true)
+            let r2 = alert2.runModal()
+            if r2 == .alertFirstButtonReturn {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.keyboard?Shortcuts") {
                     NSWorkspace.shared.open(url)
                 }
             }
