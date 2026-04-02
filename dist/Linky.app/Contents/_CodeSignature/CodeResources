@@ -12,6 +12,14 @@
 		<data>
 		LmTmoutc2Z/EgcCPM8khaq6a6e0=
 		</data>
+		<key>Resources/Linky SMB-Link kopieren.workflow/Contents/Info.plist</key>
+		<data>
+		n76fQZRIiWMZ+9Xec1VMnntN0GU=
+		</data>
+		<key>Resources/Linky SMB-Link kopieren.workflow/Contents/document.wflow</key>
+		<data>
+		kLtMwYZ166VL4r2DF6r5kmpU7To=
+		</data>
 		<key>Resources/Linky SMB-Link öffnen.workflow/Contents/Info.plist</key>
 		<data>
 		onEJpo9rbDTdqhi6pTfyUzkQhRQ=
@@ -55,6 +63,20 @@
 			<key>hash2</key>
 			<data>
 			FRd52Ylz66CvcItrfX7Yullnh+oRScW7EYCwJaFBrxQ=
+			</data>
+		</dict>
+		<key>Resources/Linky SMB-Link kopieren.workflow/Contents/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			81GBeLbN0z/T66+FXptBJ48og3hVesal+lfYO5ilawM=
+			</data>
+		</dict>
+		<key>Resources/Linky SMB-Link kopieren.workflow/Contents/document.wflow</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			uftAht1kzj0PJNsj7gn7gXk9JFvyDoIybTQ53ilGG3A=
 			</data>
 		</dict>
 		<key>Resources/Linky SMB-Link öffnen.workflow/Contents/Info.plist</key>

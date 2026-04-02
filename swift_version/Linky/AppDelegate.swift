@@ -11,7 +11,7 @@ import UserNotifications
 // MARK: - Configuration
 
 let appName = "Linky"
-let appVersion = "2.2.0"
+let appVersion = "2.2.1"
 let bundleId = "com.linky.app"
 let githubRepo = "Zenovs/linky"
 let githubAPIURL = "https://api.github.com/repos/\(githubRepo)/releases/latest"
@@ -36,7 +36,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private let lastUpdateCheckKey = "LastUpdateCheck"
     private let skippedVersionKey = "SkippedVersion"
     private let launchAgentLabel = "com.linky.autostart"
-    private let workflowNames = ["SMB-Link kopieren.workflow", "SMB-Link öffnen.workflow"]
+    private let workflowNames = [
+        "SMB-Link kopieren.workflow",
+        "SMB-Link öffnen.workflow",
+        "Linky SMB-Link kopieren.workflow",
+        "Linky SMB-Link öffnen.workflow"
+    ]
     
     // Update check interval (24 hours)
     private let updateCheckInterval: TimeInterval = 24 * 60 * 60
@@ -336,71 +341,215 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     private func checkForUpdates(showNoUpdateMessage: Bool) {
         guard let url = URL(string: githubAPIURL) else { return }
-        
+
         var request = URLRequest(url: url)
         request.setValue("\(appName)/\(appVersion)", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 10
-        
+
         let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
-            
+
             if let error = error {
                 NSLog("Update check error: \(error)")
                 if showNoUpdateMessage {
                     DispatchQueue.main.async {
-                        self.showNotification(
-                            title: appName,
-                            message: "Update-Prüfung fehlgeschlagen. Bitte später erneut versuchen."
-                        )
+                        self.showUpdateError("Update-Prüfung fehlgeschlagen. Bitte Internetverbindung prüfen.")
                     }
                 }
                 return
             }
-            
+
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tagName = json["tag_name"] as? String else {
                 return
             }
-            
+
             let remoteVersion = tagName.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-            let htmlURL = json["html_url"] as? String ?? githubReleasesURL
-            
+            // Find the DMG asset URL directly
+            let dmgURL: String? = {
+                guard let assets = json["assets"] as? [[String: Any]] else { return nil }
+                return assets.compactMap { $0["browser_download_url"] as? String }
+                             .first { $0.hasSuffix(".dmg") }
+            }()
+
             NSLog("Remote version: \(remoteVersion), Local version: \(appVersion)")
-            
-            // Update last check time
             UserDefaults.standard.set(Date(), forKey: self.lastUpdateCheckKey)
-            
-            // Check if this version was skipped
+
             let skippedVersion = UserDefaults.standard.string(forKey: self.skippedVersionKey)
-            
+
             if self.isNewerVersion(remoteVersion, than: appVersion) {
                 if skippedVersion != remoteVersion {
                     DispatchQueue.main.async {
                         self.availableVersion = remoteVersion
-                        self.availableURL = htmlURL
-                        self.showNotification(
-                            title: "\(appName) Update verfügbar!",
-                            message: "Version \(remoteVersion) ist verfügbar. Klicken Sie auf 'Nach Updates suchen...' im Menü."
-                        )
+                        self.availableURL = dmgURL
+                        self.showUpdateDialog(version: remoteVersion, dmgURL: dmgURL)
                     }
                 }
             } else if showNoUpdateMessage {
                 DispatchQueue.main.async {
-                    self.showNotification(
-                        title: appName,
-                        message: "Sie verwenden bereits die neueste Version (\(appVersion))"
-                    )
+                    self.showUpdateCurrent()
                 }
             }
         }
         task.resume()
     }
-    
+
+    private func showUpdateDialog(version: String, dmgURL: String?) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "\(appName) \(version) verfügbar"
+        alert.informativeText = "Aktuelle Version: \(appVersion)\nNeue Version: \(version)\n\nJetzt aktualisieren?"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Jetzt installieren")
+        alert.addButton(withTitle: "Überspringen")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let dmgURL = dmgURL {
+                downloadAndInstall(dmgURL: dmgURL, version: version)
+            } else {
+                // Fallback: GitHub Releases Seite öffnen
+                if let url = URL(string: githubReleasesURL) {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        } else {
+            UserDefaults.standard.set(version, forKey: skippedVersionKey)
+        }
+    }
+
+    private func showUpdateCurrent() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = appName
+        alert.informativeText = "Du verwendest bereits die neueste Version (\(appVersion))."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    private func showUpdateError(_ message: String) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Update-Prüfung fehlgeschlagen"
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    private func downloadAndInstall(dmgURL: String, version: String) {
+        // Progress window
+        let progressAlert = NSAlert()
+        progressAlert.messageText = "Update wird heruntergeladen..."
+        progressAlert.informativeText = "Version \(version) wird installiert. Bitte warten."
+        progressAlert.alertStyle = .informational
+        progressAlert.addButton(withTitle: "Im Hintergrund")
+
+        let indicator = NSProgressIndicator()
+        indicator.style = .bar
+        indicator.isIndeterminate = true
+        indicator.frame = NSRect(x: 0, y: 0, width: 300, height: 20)
+        indicator.startAnimation(nil)
+        progressAlert.accessoryView = indicator
+
+        NSApp.activate(ignoringOtherApps: true)
+        progressAlert.layout()
+        // Show non-blocking (beginSheetModal would need a window, so we show and dismiss)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.performDownloadAndInstall(dmgURL: dmgURL, version: version)
+        }
+        progressAlert.runModal()
+    }
+
+    private func performDownloadAndInstall(dmgURL: String, version: String) {
+        guard let url = URL(string: dmgURL) else { return }
+
+        let tmpDMG = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("Linky-update-\(version).dmg")
+        let tmpMount = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("linky-mount-\(UUID().uuidString)")
+
+        defer {
+            // Cleanup
+            let proc = Process()
+            proc.launchPath = "/usr/bin/hdiutil"
+            proc.arguments = ["detach", tmpMount.path, "-quiet"]
+            try? proc.run(); proc.waitUntilExit()
+            try? FileManager.default.removeItem(at: tmpDMG)
+            try? FileManager.default.removeItem(at: tmpMount)
+        }
+
+        do {
+            // 1. Download
+            NSLog("Downloading update from \(dmgURL)")
+            let data = try Data(contentsOf: url)
+            try data.write(to: tmpDMG)
+            NSLog("Download complete: \(tmpDMG.path)")
+
+            // 2. Mount
+            try FileManager.default.createDirectory(at: tmpMount, withIntermediateDirectories: true)
+            let mount = Process()
+            mount.launchPath = "/usr/bin/hdiutil"
+            mount.arguments = ["attach", tmpDMG.path, "-mountpoint", tmpMount.path, "-quiet", "-nobrowse"]
+            try mount.run(); mount.waitUntilExit()
+            guard mount.terminationStatus == 0 else { throw NSError(domain: "Linky", code: 1) }
+
+            // 3. Copy app
+            let srcApp = tmpMount.appendingPathComponent("Linky.app")
+            let dstApp = URL(fileURLWithPath: "/Applications/Linky.app")
+            guard FileManager.default.fileExists(atPath: srcApp.path) else { throw NSError(domain: "Linky", code: 2) }
+            try? FileManager.default.removeItem(at: dstApp)
+            try FileManager.default.copyItem(at: srcApp, to: dstApp)
+            NSLog("App copied to /Applications")
+
+            // 4. Sign & remove quarantine
+            let sign = Process()
+            sign.launchPath = "/usr/bin/codesign"
+            sign.arguments = ["--force", "--deep", "--sign", "-", dstApp.path]
+            try? sign.run(); sign.waitUntilExit()
+
+            let xattr = Process()
+            xattr.launchPath = "/usr/bin/xattr"
+            xattr.arguments = ["-rd", "com.apple.quarantine", dstApp.path]
+            try? xattr.run(); xattr.waitUntilExit()
+
+            // 5. Relaunch
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+                let doneAlert = NSAlert()
+                doneAlert.messageText = "Update installiert!"
+                doneAlert.informativeText = "Linky \(version) wurde installiert. Die App wird jetzt neu gestartet."
+                doneAlert.alertStyle = .informational
+                doneAlert.addButton(withTitle: "Neu starten")
+                doneAlert.runModal()
+
+                // Relaunch
+                let relaunch = Process()
+                relaunch.launchPath = "/usr/bin/open"
+                relaunch.arguments = [dstApp.path]
+                try? relaunch.run()
+                NSApp.terminate(nil)
+            }
+        } catch {
+            NSLog("Update install error: \(error)")
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+                let errAlert = NSAlert()
+                errAlert.messageText = "Update fehlgeschlagen"
+                errAlert.informativeText = "Bitte manuell aktualisieren:\ncurl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash"
+                errAlert.alertStyle = .warning
+                errAlert.addButton(withTitle: "OK")
+                errAlert.runModal()
+            }
+        }
+    }
+
     private func isNewerVersion(_ remote: String, than local: String) -> Bool {
         let remoteParts = remote.split(separator: ".").compactMap { Int($0) }
         let localParts = local.split(separator: ".").compactMap { Int($0) }
-        
+
         for i in 0..<max(remoteParts.count, localParts.count) {
             let r = i < remoteParts.count ? remoteParts[i] : 0
             let l = i < localParts.count ? localParts[i] : 0
@@ -408,13 +557,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             if r < l { return false }
         }
         return false
-    }
-    
-    private func openDownloadPage() {
-        let url = availableURL ?? githubReleasesURL
-        if let nsurl = URL(string: url) {
-            NSWorkspace.shared.open(nsurl)
-        }
     }
     
     // MARK: - URL Handler
@@ -574,7 +716,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
     
     @objc private func manualCheckForUpdates() {
-        showNotification(title: appName, message: "Suche nach Updates...")
         checkForUpdates(showNoUpdateMessage: true)
     }
     
