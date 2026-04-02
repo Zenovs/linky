@@ -115,45 +115,48 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ "$SKIP_DOWNLOAD" -eq 0 ]]; then
+if [[ "$SKIP_DOWNLOAD" -eq 1 ]]; then
+    step "Installation überspringen"
+    ok "Version ${INSTALLED_VERSION} bereits installiert – kein Download nötig"
+else
     step "App herunterladen  ${DIM}(${VERSION})${NC}"
     echo ""
     curl -fL --progress-bar "$DMG_URL" -o "$TMP_DMG" \
         || die "Download fehlgeschlagen."
     echo ""
     ok "Download abgeschlossen"
+
+    # ── 4. App installieren ──────────────────────────────────────────────
+    step "App installieren"
+
+    spin_start "Disk-Image einhängen..."
+    hdiutil attach "$TMP_DMG" -mountpoint "$TMP_MNT" -quiet -nobrowse \
+        || { spin_stop; die "DMG konnte nicht eingehängt werden."; }
+    spin_stop
+    ok "Image eingehängt"
+
+    [[ -d "$TMP_MNT/${APP_NAME}.app" ]] \
+        || die "${APP_NAME}.app nicht im DMG gefunden."
+
+    spin_start "${APP_NAME}.app nach ${INSTALL_DIR} kopieren..."
+    rm -rf "${INSTALL_DIR:?}/${APP_NAME}.app"
+    cp -R "$TMP_MNT/${APP_NAME}.app" "${INSTALL_DIR}/"
+    spin_stop
+    ok "App kopiert"
+
+    # ── 5. Signierung & Quarantine ───────────────────────────────────────
+    step "Sicherheitseinstellungen"
+
+    spin_start "Ad-hoc Signatur anwenden..."
+    codesign --force --deep --sign - "${INSTALL_DIR}/${APP_NAME}.app" 2>/dev/null || true
+    spin_stop
+    ok "Signiert"
+
+    spin_start "Quarantine-Flag entfernen..."
+    xattr -rd com.apple.quarantine "${INSTALL_DIR}/${APP_NAME}.app" 2>/dev/null || true
+    spin_stop
+    ok "Quarantine entfernt"
 fi
-
-# ── 4. App installieren ────────────────────────────────────────────────────
-step "App installieren"
-
-spin_start "Disk-Image einhängen..."
-hdiutil attach "$TMP_DMG" -mountpoint "$TMP_MNT" -quiet -nobrowse \
-    || { spin_stop; die "DMG konnte nicht eingehängt werden."; }
-spin_stop
-ok "Image eingehängt"
-
-[[ -d "$TMP_MNT/${APP_NAME}.app" ]] \
-    || die "${APP_NAME}.app nicht im DMG gefunden."
-
-spin_start "${APP_NAME}.app nach ${INSTALL_DIR} kopieren..."
-rm -rf "${INSTALL_DIR:?}/${APP_NAME}.app"
-cp -R "$TMP_MNT/${APP_NAME}.app" "${INSTALL_DIR}/"
-spin_stop
-ok "App kopiert"
-
-# ── 5. Signierung & Quarantine ────────────────────────────────────────────
-step "Sicherheitseinstellungen"
-
-spin_start "Ad-hoc Signatur anwenden..."
-codesign --force --deep --sign - "${INSTALL_DIR}/${APP_NAME}.app" 2>/dev/null || true
-spin_stop
-ok "Signiert"
-
-spin_start "Quarantine-Flag entfernen..."
-xattr -rd com.apple.quarantine "${INSTALL_DIR}/${APP_NAME}.app" 2>/dev/null || true
-spin_stop
-ok "Quarantine entfernt"
 
 # ── 6. App starten ────────────────────────────────────────────────────────
 step "Linky starten"
@@ -179,7 +182,15 @@ echo ""
 echo -e "  ${DIM}App:${NC}        ${INSTALL_DIR}/${APP_NAME}.app"
 echo -e "  ${DIM}Menüleiste:${NC} 🔗 Symbol oben rechts"
 echo ""
-echo -e "  ${DIM}Quick Actions aktivieren:${NC}"
-echo -e "  -> Beim ersten Start erscheint ein Dialog – einfach auf"
-echo -e "     ${BOLD}Einstellungen oeffnen${NC} klicken und die Dienste aktivieren."
+echo -e "${YLW}${BOLD}  Zwei einmalige Schritte zum Abschluss:${NC}"
+echo ""
+echo -e "  ${BOLD}1. Bedienungshilfen erlauben${NC}"
+echo -e "     macOS fragt automatisch nach der Berechtigung."
+echo -e "     Systemeinstellungen > Datenschutz > Bedienungshilfen"
+echo -e "     → Linky aktivieren  (noetig fuer Cmd+V Erkennung)"
+echo ""
+echo -e "  ${BOLD}2. Quick Actions aktivieren${NC}"
+echo -e "     Ein Dialog erscheint gleich – auf ${BOLD}Einstellungen oeffnen${NC} klicken"
+echo -e "     → alle drei Linky-Eintraege aktivieren"
+echo -e "     (noetig fuer Rechtsklick-Menue im Finder & Browser)"
 echo ""
