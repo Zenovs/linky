@@ -7,6 +7,40 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [3.0.0] - 2026-05-25
+
+### Major — Vom SMB-Helfer zum vollwertigen Datei-Browser
+
+Linky ist nicht mehr nur eine Menüleisten-Utility — die App öffnet jetzt ein eigenes Browser-Fenster mit Sidebar, Datei-Liste und integrierter Suche. Alle bisherigen Funktionen (SMB-Auto-Open, Quick Actions, Browser-Dienst) bleiben unverändert.
+
+### Hinzugefügt
+- 🪟 **Datei-Browser-Fenster** mit Sidebar (Favoriten / NAS / Geräte) + Datei-Liste mit Spalten Name/Geändert/Größe
+- 🔍 **Suche** mit drei Scopes: aktueller Ordner, ganzer Mac (Spotlight), alle gemounteten NAS-Shares (paralleler Walker)
+- 📑 **Tabs** — ⌘T neuer Tab, ⌘W schliessen, ⌘⇧[ / ⌘⇧] wechseln, jeder Tab hat eigene Location & History
+- ⭐ **Eigene Favoriten** — Datei oder Ordner zu Sidebar pinnen, persistent
+- 📡 **Bonjour-SMB-Discovery** — SMB-Server im LAN erscheinen automatisch in der Sidebar unter „Im Netzwerk"
+- ⚡ **Auto-Mount für SMB-Verknüpfungen** beim App-Start und bei Netzwerk-Wechsel (Wi-Fi / Ethernet / VPN), via `NWPathMonitor`
+- 📁 **Datei-Operationen** — Kopieren (⌘C), Einfügen (⌘V), Verschieben (⌥⌘V), Duplizieren (⌘D), Umbenennen, In Papierkorb (⌘⌫), Neuer Ordner (⇧⌘N), Information (⌘I), Quick Look (Leertaste), Alle auswählen (⌘A)
+- 🔤 **Type-to-Filter à la Ubuntu** — einfach lostippen während die Liste sichtbar ist, lokal gefilterte Ansicht mit Floating-Badge
+- 🗺️ **Lokalisierte Pfadleiste & Sidebar** — Ordnernamen folgen der System-Sprache (Dokumente / Documents, Programme / Applications)
+- 🎨 **Adaptives Design-System** — Sage-Grün / Lavendel / Crème im Light Mode, Kupfer / Forest-Green / Charcoal im Dark Mode, folgt automatisch der System-Einstellung
+- 🅻 **LINKY ASCII-Logo** oben links in der Sidebar
+- 🟢 **Dock-Icon** — App ist jetzt sowohl im Dock als auch in der Menüleiste, kann via Rechtsklick fixiert werden
+- 🗂 **Programme-Ansicht zusammengeführt** — `/Applications` + `/System/Applications` werden gemeinsam angezeigt
+- 🚀 **Apps starten beim Doppelklick** statt Paketinhalt zu zeigen
+
+### Geändert
+- 🔄 **Bundle-Struktur**: alle bisherigen Features bleiben, ergänzt um umfangreiche neue Module (BrowserWindow, Sidebar, FileListView, SearchEngine, VolumeManager, FavoriteStore, BonjourBrowser, AutoMountService, TabManager, QuickLookHandler, Theme)
+- 🔄 **LSUIElement** entfernt — App ist jetzt Regular statt Accessory, startet mit Dock-Icon
+- 🔄 **Title-Bar transparent** mit Full-Size-Content für moderne Browser-Optik
+
+### Behoben
+- 🐛 Selektion in Datei-Liste wird jetzt zuverlässig sichtbar gerendert (statt unsichtbar zu bleiben)
+- 🐛 System-Beep beim Tippen unterdrückt — Type-to-Filter ist geräuschlos
+- 🐛 Breadcrumb-Höhe auf 24pt fixiert (vorher hat horizontaler ScrollView vertikal expandiert)
+
+---
+
 ## [2.1.0] - 2026-03-18
 
 ### Hinzugefügt

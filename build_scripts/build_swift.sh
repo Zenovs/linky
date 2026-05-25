@@ -16,7 +16,7 @@ set -e
 
 # Configuration
 APP_NAME="Linky"
-VERSION="2.2.1"
+VERSION="3.0.0"
 BUNDLE_ID="com.linky.app"
 MIN_MACOS="12.0"
 
@@ -58,20 +58,42 @@ rm -rf "$APP_BUNDLE"
 info "Compiling Swift sources..."
 cd "$SWIFT_DIR"
 
+# Collect all Swift sources in the module
+SWIFT_SOURCES=(
+    main.swift
+    AppDelegate.swift
+    Theme.swift
+    BrowserModels.swift
+    VolumeManager.swift
+    SMBMounter.swift
+    AutoMountService.swift
+    BonjourBrowser.swift
+    SearchEngine.swift
+    FavoriteStore.swift
+    FileOperations.swift
+    QuickLookHandler.swift
+    TabState.swift
+    Sidebar.swift
+    FileListView.swift
+    BrowserWindow.swift
+)
+
 # Build Universal Binary (arm64 + x86_64)
 swiftc -o "$OUTPUT_DIR/${APP_NAME}_arm64" \
     -target arm64-apple-macos$MIN_MACOS \
     -O \
     -framework Cocoa \
     -framework UserNotifications \
-    AppDelegate.swift main.swift
+    -framework Quartz \
+    "${SWIFT_SOURCES[@]}"
 
 swiftc -o "$OUTPUT_DIR/${APP_NAME}_x86_64" \
     -target x86_64-apple-macos$MIN_MACOS \
     -O \
     -framework Cocoa \
     -framework UserNotifications \
-    AppDelegate.swift main.swift
+    -framework Quartz \
+    "${SWIFT_SOURCES[@]}"
 
 lipo -create -output "$OUTPUT_DIR/$APP_NAME" \
     "$OUTPUT_DIR/${APP_NAME}_arm64" \

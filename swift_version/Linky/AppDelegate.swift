@@ -11,7 +11,7 @@ import UserNotifications
 // MARK: - Configuration
 
 let appName = "Linky"
-let appVersion = "2.2.1"
+let appVersion = "3.0.0"
 let bundleId = "com.linky.app"
 let githubRepo = "Zenovs/linky"
 let githubAPIURL = "https://api.github.com/repos/\(githubRepo)/releases/latest"
@@ -54,10 +54,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSLog("\(appName) v\(appVersion) started")
-        
-        // Set as accessory app (no dock icon)
-        NSApp.setActivationPolicy(.accessory)
-        
+
+        // Regular app: shows up in Dock AND keeps the menu-bar icon.
+        NSApp.setActivationPolicy(.regular)
+
+        // Appearance follows the system setting (light → sage/cream,
+        // dark → copper/charcoal). No override.
+
         // Initialize defaults
         setupDefaults()
         
@@ -86,10 +89,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         // Setup periodic update check
         setupUpdateTimer()
-        
+
+        // Start auto-mount service for SMB bookmarks
+        AutoMountService.shared.start()
+
+        // Start Bonjour browser so the sidebar surfaces LAN SMB servers
+        BonjourBrowser.shared.start()
+
         NSLog("App initialization complete")
     }
     
+    // Keep the app alive when the browser window is closed — the status-bar
+    // item, SMB-handler and auto-mount service must keep running.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+
+    // Re-open the browser window when the user clicks the Dock icon while
+    // there is no visible window.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            BrowserWindowController.shared.showWindow()
+        }
+        return true
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         // Remove monitors
         if let monitor = globalMonitor {
@@ -149,10 +173,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     private func updateMenu() {
         let menu = NSMenu()
-        
+
+        // Browser-Fenster öffnen
+        let openBrowserItem = NSMenuItem(
+            title: "Linky öffnen",
+            action: #selector(openBrowserWindow),
+            keyEquivalent: "o"
+        )
+        openBrowserItem.keyEquivalentModifierMask = [.command]
+        menu.addItem(openBrowserItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Auto-open toggle
         let autoOpenItem = NSMenuItem(
-            title: "Automatisches Öffnen",
+            title: "SMB-Links automatisch öffnen",
             action: #selector(toggleAutoOpen),
             keyEquivalent: ""
         )
@@ -717,6 +752,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     @objc private func manualCheckForUpdates() {
         checkForUpdates(showNoUpdateMessage: true)
+    }
+
+    @objc private func openBrowserWindow() {
+        BrowserWindowController.shared.showWindow()
     }
     
     private func updateLaunchAgent(enabled: Bool) {

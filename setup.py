@@ -14,7 +14,7 @@ from setuptools import setup
 
 APP = ['src/linky.py']
 APP_NAME = 'Linky'
-VERSION = '2.1.0'
+VERSION = '3.0.0'
 BUNDLE_ID = 'com.linky.app'
 
 DATA_FILES = [
