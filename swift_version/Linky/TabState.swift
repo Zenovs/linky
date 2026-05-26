@@ -72,6 +72,14 @@ final class TabModel: ObservableObject, Identifiable {
     }
 
     func loadContents() {
+        // Guard against accidentally enumerating non-file URLs (e.g. smb://…)
+        // which can block the I/O queue waiting for a mount that never happens.
+        guard location.isFileURL else {
+            folderContents = []
+            fileSelection = []
+            isLoading = false
+            return
+        }
         isLoading = true
         let target = location
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in

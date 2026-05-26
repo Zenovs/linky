@@ -7,6 +7,14 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [3.0.1] - 2026-05-26
+
+### Behoben
+- 🐛 **Linky hängt sich beim Klick auf SMB-Bookmark auf** — `handleSidebarSelection` versuchte `FileManager.contentsOfDirectory` auf rohen `smb://`-URLs, was die I/O-Queue blockierte wenn der Share noch nicht gemountet war. Jetzt wird vorher geprüft ob der Share schon gemountet ist (→ Navigation zum lokalen Mount-Point) oder ob ein Mount getriggert werden muss
+- 🛡️ **Defensive Guard** in `TabModel.loadContents()` gegen Non-File-URLs — sofortiger Abbruch mit leerer Liste statt blockierender Enumeration
+
+---
+
 ## [3.0.0] - 2026-05-25
 
 ### Major — Vom SMB-Helfer zum vollwertigen Datei-Browser

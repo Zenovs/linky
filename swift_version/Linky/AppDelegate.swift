@@ -11,7 +11,7 @@ import UserNotifications
 // MARK: - Configuration
 
 let appName = "Linky"
-let appVersion = "3.0.0"
+let appVersion = "3.0.1"
 let bundleId = "com.linky.app"
 let githubRepo = "Zenovs/linky"
 let githubAPIURL = "https://api.github.com/repos/\(githubRepo)/releases/latest"

@@ -147,8 +147,23 @@ struct BrowserRootView: View {
     // MARK: - Sidebar / search handlers
 
     private func handleSidebarSelection(_ item: SidebarItem?) {
+        // Bonjour discovery: navigate if already mounted, otherwise trigger mount.
         if case let .bonjour(service) = item {
-            SMBMounter.connect(smbURL: service.smbURL)
+            if let mountPoint = SMBMounter.mountPoint(for: service.smbURL) {
+                activeTab.navigate(to: mountPoint)
+            } else {
+                SMBMounter.connect(smbURL: service.smbURL)
+            }
+            return
+        }
+        // SMB bookmark: same logic — never navigate to a raw smb:// URL because
+        // FileManager.contentsOfDirectory would block on the unmounted share.
+        if case let .smbBookmark(bookmark) = item {
+            if let mountPoint = SMBMounter.mountPoint(for: bookmark.url) {
+                activeTab.navigate(to: mountPoint)
+            } else {
+                SMBMounter.connect(smbURL: bookmark.url)
+            }
             return
         }
         if let url = item?.targetURL {
