@@ -7,6 +7,19 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [3.0.2] - 2026-05-26
+
+### Behoben
+- 🔍 **NAS-Suche findet jetzt zuverlässig** — Walker war Depth-First (FileManager.enumerator) und vergrub sich in der ersten Unterordner-Hierarchie. Auf großen SMB-Shares wurde so der erste relevante Top-Level-Eintrag nach 30 s noch nicht erreicht. Umgebaut auf **Breadth-First** mit `contentsOfDirectory` pro Level — shallow Treffer erscheinen in Sekunden
+- ⏱ Hard-Timeout von 60 s pro Volume, max. Tiefe 12 Levels, Bundle-Ordner (.app/.bundle/.framework/.photoslibrary/.musiclibrary) werden übersprungen — sauberer Abbruch statt endlosem Walk
+
+### Verbessert
+- 🎯 **NAS-Volume-Erkennung robuster** — Fallback wenn `volumeIsLocal` nicht korrekt gesetzt ist (manche SMB-Server liefern das nicht); jeder Non-Internal-Mount unter `/Volumes/` zählt als suchbar
+- 🇩🇪 **Diakritik-tolerante Suche** — „muller" findet „Müller", „cafe" findet „Café"
+- 🗂 **„Ordner"-Scope nutzt automatisch den Walker** wenn du im NAS-Pfad stehst (Spotlight indiziert SMB nicht)
+
+---
+
 ## [3.0.1] - 2026-05-26
 
 ### Behoben

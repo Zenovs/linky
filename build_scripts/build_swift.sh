@@ -16,7 +16,7 @@ set -e
 
 # Configuration
 APP_NAME="Linky"
-VERSION="3.0.1"
+VERSION="3.0.2"
 BUNDLE_ID="com.linky.app"
 MIN_MACOS="12.0"
 

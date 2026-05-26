@@ -731,7 +731,7 @@ struct TabContentColumn: View {
         case .folder: return FileManager.default.displayName(atPath: tab.location.path)
         case .mac:    return "ganzer Mac"
         case .allNAS:
-            let count = VolumeManager.shared.networkVolumes.count
+            let count = VolumeManager.shared.searchableNASVolumes.count
             return count == 0 ? "keine NAS gemountet" : "\(count) NAS-Share\(count == 1 ? "" : "s")"
         }
     }

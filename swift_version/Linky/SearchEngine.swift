@@ -3,13 +3,17 @@
 //  Linky
 //
 //  Two search backends:
-//    • Spotlight (NSMetadataQuery) for local folders / whole Mac
+//    • Spotlight (NSMetadataQuery) for indexed local folders / whole Mac
 //    • Manual parallel filesystem walk for mounted NAS / network volumes
 //      (Spotlight doesn't index SMB shares)
+//
+//  The dispatch picks the right backend automatically based on the scope
+//  and whether the current folder is on a network volume.
 //
 
 import Foundation
 import Combine
+import AppKit
 
 enum SearchScope: Equatable {
     case currentFolder(URL)
@@ -36,10 +40,10 @@ final class SearchEngine: ObservableObject {
     private let metadataQuery = NSMetadataQuery()
     private var cancellables = Set<AnyCancellable>()
     private let maxMetadataResults = 500
-    private let maxNASResultsPerVolume = 400
+    private let maxResultsPerVolume = 400
 
-    // Token cancels in-flight NAS walks when a new search starts.
-    private var nasSearchToken: UUID?
+    // Token cancels in-flight manual walks when a new search starts.
+    private var walkToken: UUID?
 
     init() {
         let nc = NotificationCenter.default
@@ -67,12 +71,14 @@ final class SearchEngine: ObservableObject {
 
     deinit {
         metadataQuery.stop()
-        nasSearchToken = nil
+        walkToken = nil
     }
+
+    // MARK: - Dispatch
 
     private func runSearch(query: String, scope: SearchScope) {
         metadataQuery.stop()
-        nasSearchToken = nil  // cancel any in-flight NAS walk
+        walkToken = nil
 
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -82,16 +88,29 @@ final class SearchEngine: ObservableObject {
         }
 
         switch scope {
-        case .currentFolder, .localComputer:
-            runMetadataQuery(query: trimmed, scope: scope)
+        case .currentFolder(let folder):
+            // Spotlight doesn't index network mounts. Detect & route to manual
+            // walker so searching from inside a NAS folder actually works.
+            if VolumeManager.isOnNetworkVolume(folder) {
+                NSLog("Search: walking single folder \(folder.path) (network)")
+                startManualWalk(folders: [folder], query: trimmed)
+            } else {
+                NSLog("Search: Spotlight in folder \(folder.path)")
+                startMetadataQuery(query: trimmed, scopes: [folder])
+            }
+        case .localComputer:
+            NSLog("Search: Spotlight whole-mac")
+            startMetadataQuery(query: trimmed, scopes: [NSMetadataQueryLocalComputerScope])
         case .allNetworkVolumes:
-            runNASSearch(query: trimmed)
+            let vols = VolumeManager.shared.searchableNASVolumes
+            NSLog("Search: walking \(vols.count) NAS volume(s): \(vols.map { $0.name })")
+            startManualWalk(folders: vols.map { $0.url }, query: trimmed)
         }
     }
 
     // MARK: - Spotlight backend
 
-    private func runMetadataQuery(query: String, scope: SearchScope) {
+    private func startMetadataQuery(query: String, scopes: [Any]) {
         isSearching = true
 
         let escaped = query
@@ -101,20 +120,10 @@ final class SearchEngine: ObservableObject {
         metadataQuery.predicate = NSPredicate(
             format: "kMDItemFSName LIKE[cd] %@", "*\(escaped)*"
         )
-
-        switch scope {
-        case .currentFolder(let folder):
-            metadataQuery.searchScopes = [folder]
-        case .localComputer:
-            metadataQuery.searchScopes = [NSMetadataQueryLocalComputerScope]
-        case .allNetworkVolumes:
-            return  // handled by runNASSearch
-        }
-
+        metadataQuery.searchScopes = scopes
         metadataQuery.sortDescriptors = [
             NSSortDescriptor(key: NSMetadataItemFSNameKey, ascending: true)
         ]
-
         metadataQuery.start()
     }
 
@@ -135,67 +144,97 @@ final class SearchEngine: ObservableObject {
         results = hits
     }
 
-    // MARK: - Manual NAS backend (parallel walk)
+    // MARK: - Manual walker backend
 
-    private func runNASSearch(query: String) {
-        let volumes = VolumeManager.shared.networkVolumes
+    private func startManualWalk(folders: [URL], query: String) {
         results = []
 
-        guard !volumes.isEmpty else {
+        guard !folders.isEmpty else {
             isSearching = false
             return
         }
 
         let token = UUID()
-        nasSearchToken = token
+        walkToken = token
         isSearching = true
 
-        let needle = query.lowercased()
+        let needle = query
         let group = DispatchGroup()
-        let pendingCount = volumes.count
 
-        for volume in volumes {
+        for folder in folders {
             group.enter()
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                self?.walkVolume(root: volume.url, needle: needle, token: token)
+                self?.walk(root: folder, needle: needle, token: token)
                 group.leave()
             }
         }
 
         group.notify(queue: .main) { [weak self] in
-            guard let self = self, self.nasSearchToken == token else { return }
+            guard let self = self, self.walkToken == token else { return }
             self.isSearching = false
-            _ = pendingCount  // silence unused
+            NSLog("Search: walk complete (\(self.results.count) total hits)")
         }
     }
 
-    private func walkVolume(root: URL, needle: String, token: UUID) {
-        guard let enumerator = FileManager.default.enumerator(
-            at: root,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles, .skipsPackageDescendants],
-            errorHandler: { _, _ in true }
-        ) else { return }
-
+    private func walk(root: URL, needle: String, token: UUID) {
+        // Breadth-first walk. FileManager.enumerator is depth-first which
+        // means on big SMB shares it disappears into the first subfolder
+        // before ever listing siblings at the root. BFS lists every level
+        // top-down so shallow matches are found in seconds.
+        var queue: [(url: URL, depth: Int)] = [(root, 0)]
         var batch: [SearchHit] = []
         var found = 0
+        var scanned = 0
+        let maxDepth = 12
+        let deadline = Date().addingTimeInterval(60)  // hard cap per volume
 
-        for case let url as URL in enumerator {
-            // Cancelled?
-            if nasSearchToken != token { return }
-            if found >= maxNASResultsPerVolume { break }
+        while !queue.isEmpty {
+            if walkToken != token { return }
+            if found >= maxResultsPerVolume { break }
+            if Date() > deadline {
+                NSLog("Search: timeout on \(root.lastPathComponent) after \(scanned) entries")
+                break
+            }
 
-            let name = url.lastPathComponent.lowercased()
-            if name.contains(needle) {
-                batch.append(SearchHit(url: url))
-                found += 1
+            let (current, depth) = queue.removeFirst()
 
-                if batch.count >= 25 {
-                    let toPublish = batch
-                    batch = []
-                    DispatchQueue.main.async { [weak self] in
-                        guard let self = self, self.nasSearchToken == token else { return }
-                        self.results.append(contentsOf: toPublish)
+            guard let entries = try? FileManager.default.contentsOfDirectory(
+                at: current,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+
+            for entry in entries {
+                if walkToken != token { return }
+                scanned += 1
+
+                let name = entry.lastPathComponent
+                if name.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) != nil {
+                    batch.append(SearchHit(url: entry))
+                    found += 1
+
+                    if batch.count >= 20 {
+                        let toPublish = batch
+                        batch = []
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self = self, self.walkToken == token else { return }
+                            self.results.append(contentsOf: toPublish)
+                        }
+                    }
+
+                    if found >= maxResultsPerVolume { break }
+                }
+
+                // Queue subdirectories for next BFS level (within depth limit).
+                if depth < maxDepth {
+                    let values = try? entry.resourceValues(forKeys: [.isDirectoryKey])
+                    if values?.isDirectory == true {
+                        // Skip well-known package bundles to keep the walk lean.
+                        let ext = entry.pathExtension.lowercased()
+                        if !["app", "bundle", "framework", "kext", "plugin",
+                             "photoslibrary", "musiclibrary"].contains(ext) {
+                            queue.append((entry, depth + 1))
+                        }
                     }
                 }
             }
@@ -204,10 +243,12 @@ final class SearchEngine: ObservableObject {
         if !batch.isEmpty {
             let final = batch
             DispatchQueue.main.async { [weak self] in
-                guard let self = self, self.nasSearchToken == token else { return }
+                guard let self = self, self.walkToken == token else { return }
                 self.results.append(contentsOf: final)
             }
         }
+
+        NSLog("Search: \(root.lastPathComponent) — scanned \(scanned), matched \(found)")
     }
 
     // MARK: - Public
@@ -215,7 +256,7 @@ final class SearchEngine: ObservableObject {
     func clear() {
         query = ""
         metadataQuery.stop()
-        nasSearchToken = nil
+        walkToken = nil
         results = []
         isSearching = false
     }

@@ -84,4 +84,27 @@ final class VolumeManager: ObservableObject {
     var networkVolumes: [VolumeItem] {
         volumes.filter { $0.isNetwork }
     }
+
+    /// Volumes the user expects to be searchable when picking the "NAS" scope.
+    /// Strictly tagged network mounts come first; if macOS didn't tag the SMB
+    /// mount as `!isLocal` (happens with some servers), we fall back to any
+    /// non-internal mount under `/Volumes/`.
+    var searchableNASVolumes: [VolumeItem] {
+        let strict = volumes.filter { $0.isNetwork }
+        if !strict.isEmpty { return strict }
+        return volumes.filter { v in
+            !v.isInternal && v.url.path.hasPrefix("/Volumes/")
+        }
+    }
+
+    /// True if the given URL lives on a non-local (network) volume.
+    static func isOnNetworkVolume(_ url: URL) -> Bool {
+        let values = try? url.resourceValues(forKeys: [.volumeIsLocalKey])
+        if let isLocal = values?.volumeIsLocal {
+            return !isLocal
+        }
+        // Fallback: treat anything under /Volumes/ that isn't the startup disk
+        // as potentially network.
+        return url.standardizedFileURL.path.hasPrefix("/Volumes/")
+    }
 }
