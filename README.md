@@ -1,12 +1,20 @@
 # 🔗 Linky
 
-**Linky** ist ein leichtgewichtiger Datei-Browser für macOS mit erstklassiger SMB-/NAS-Integration. Was als kleine Menüleisten-Utility für `smb://`-Links begann, ist seit v3.0.0 ein vollwertiger Finder-Alternative mit Tabs, Spotlight-Suche, NAS-Discovery und automatischem Mount.
+**Linky** ist ein leichtgewichtiger Datei-Browser für macOS mit erstklassiger SMB-/NAS-Integration — und ein `smb://` Protokoll-Handler für **Linux** und **Windows**.
 
 *[English version below](#-linky-english)*
 
+| Plattform | Status | Features |
+|-----------|--------|---------|
+| 🍎 macOS 12+ | ✅ Voll | Datei-Browser, Tabs, Bonjour, Auto-Mount, Quick Actions, Tray |
+| 🐧 Linux | ✅ Stabil | smb:// Handler, Tray-Icon, Autostart |
+| 🪟 Windows 10/11 | ✅ Stabil | smb:// Handler, Clipboard-Monitor, Explorer-Kontextmenü, Tray, Auto-Update |
+
 ---
 
-## ⚡ Installation — ein Befehl
+## ⚡ Installation
+
+### 🍎 macOS — ein Befehl
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
@@ -15,6 +23,49 @@ curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
 > Lädt die neueste Version herunter, installiert sie in `/Applications`, entfernt das Quarantine-Flag und startet die App.
 
 Bestehende Installationen aktualisieren sich automatisch: Menüleiste → **„Nach Updates suchen…"** oder beim nächsten Start.
+
+---
+
+### 🐧 Linux — ein Befehl
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/linux/install.sh | bash
+```
+
+Voraussetzungen: Python 3, `pip3` (für `pystray` + `Pillow`)
+
+**Was passiert:**
+- `linky.py` → `~/.local/bin/linky`
+- Registriert `smb://` via `xdg-mime` und `gio`
+- Autostart via `~/.config/autostart/`
+- Tray-Icon mit Menü (GNOME, KDE, XFCE …)
+
+**Deinstallieren:**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/linux/uninstall.sh)
+```
+
+---
+
+### 🪟 Windows — PowerShell (kein Admin nötig)
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest https://raw.githubusercontent.com/Zenovs/linky/main/windows/install.ps1 -OutFile install.ps1; .\install.ps1"
+```
+
+Voraussetzungen: Python 3 (mit „Add to PATH" Haken bei der Installation)
+
+**Was passiert:**
+- `linky.py` → `%LOCALAPPDATA%\Linky\`
+- Registriert `smb://` Protokoll in der Windows-Registry (`HKCU`)
+- Kontextmenü „SMB-Link kopieren" in Explorer (Ordner, Laufwerke, Netzwerk)
+- Autostart via Registry Run-Key
+- Tray-Icon mit Auto-Update
+
+**Deinstallieren:**
+```powershell
+powershell -ExecutionPolicy Bypass -File uninstall.ps1
+```
 
 ---
 
@@ -100,9 +151,29 @@ Siehe [BUILD.md](docs/BUILD.md).
 
 ## 💻 Systemanforderungen
 
-- macOS 12 (Monterey) oder neuer
-- ~5 MB Speicherplatz
-- Keine zusätzlichen Abhängigkeiten
+| | macOS | Linux | Windows |
+|---|---|---|---|
+| Version | macOS 12+ | beliebig | Windows 10/11 |
+| Speicherplatz | ~5 MB | ~1 MB | ~1 MB |
+| Abhängigkeiten | keine | Python 3, pystray, Pillow | Python 3, pystray, Pillow |
+
+---
+
+## 🐧 Linux & 🪟 Windows — Features
+
+### Gemeinsame Features (alle Plattformen)
+- **`smb://` Protokoll-Handler** — Links aus Browser, E-Mail, Teams öffnen direkt
+- **Tray-Icon** mit Menü (Automatisch öffnen, Autostart, Beenden)
+- **Autostart** — optional beim Anmelden
+
+### 🪟 Windows-spezifisch
+- **Clipboard-Monitor** — SMB-Link in der Zwischenablage → öffnet sich automatisch  
+  (entspricht Cmd+V Auto-Open auf macOS)
+- **Explorer-Kontextmenü** — Rechtsklick auf Netzwerkordner/Laufwerk  
+  → **„SMB-Link kopieren"** → `\\server\share\pfad` → `smb://server/share/pfad` in Ablage  
+  (entspricht Finder Quick Actions auf macOS)
+- **Auto-Update** — täglicher Check auf GitHub Releases, Dialog bei neuer Version
+- **Gemappte Laufwerke** — `Z:\Ordner` wird automatisch per `WNetGetUniversalNameW` aufgelöst
 
 ## 🔧 Berechtigungen
 
@@ -123,11 +194,19 @@ MIT License — Siehe [LICENSE](LICENSE).
 
 # 🔗 Linky (English)
 
-**Linky** is a lightweight file browser for macOS with first-class SMB / NAS integration. What started as a small menu-bar utility for `smb://` links has become a fully featured Finder alternative as of v3.0.0 — with tabs, Spotlight search, NAS discovery and automatic mounting.
+**Linky** is a lightweight file browser for macOS with first-class SMB / NAS integration — and an `smb://` protocol handler for **Linux** and **Windows**.
+
+| Platform | Status | Features |
+|----------|--------|---------|
+| 🍎 macOS 12+ | ✅ Full | File browser, tabs, Bonjour, auto-mount, Quick Actions, tray |
+| 🐧 Linux | ✅ Stable | smb:// handler, tray icon, autostart |
+| 🪟 Windows 10/11 | ✅ Stable | smb:// handler, clipboard monitor, Explorer context menu, tray, auto-update |
 
 ---
 
-## ⚡ Install — one command
+## ⚡ Install
+
+### 🍎 macOS — one command
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
@@ -136,6 +215,43 @@ curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/install.sh | bash
 > Downloads the latest release, installs to `/Applications`, removes the quarantine flag, and launches the app.
 
 Existing installs auto-update: menu bar → **"Check for Updates…"** or on next launch.
+
+---
+
+### 🐧 Linux — one command
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/linux/install.sh | bash
+```
+
+Requirements: Python 3, `pip3` (for `pystray` + `Pillow`)
+
+**Uninstall:**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/linux/uninstall.sh)
+```
+
+---
+
+### 🪟 Windows — PowerShell (no admin required)
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest https://raw.githubusercontent.com/Zenovs/linky/main/windows/install.ps1 -OutFile install.ps1; .\install.ps1"
+```
+
+Requirements: Python 3 (check "Add to PATH" during installation)
+
+**What happens:**
+- `linky.py` → `%LOCALAPPDATA%\Linky\`
+- Registers `smb://` protocol in Windows Registry (`HKCU` — no admin needed)
+- Context menu "Copy SMB link" in Explorer (folders, drives, network shares)
+- Autostart via Registry Run key
+- Tray icon with auto-update
+
+**Uninstall:**
+```powershell
+powershell -ExecutionPolicy Bypass -File uninstall.ps1
+```
 
 ---
 
@@ -206,9 +322,17 @@ See [BUILD.md](docs/BUILD.md).
 
 ## 💻 System requirements
 
-- macOS 12 (Monterey) or newer
-- ~5 MB disk space
-- No additional dependencies
+| | macOS | Linux | Windows |
+|---|---|---|---|
+| Version | macOS 12+ | any | Windows 10/11 |
+| Disk space | ~5 MB | ~1 MB | ~1 MB |
+| Dependencies | none | Python 3, pystray, Pillow | Python 3, pystray, Pillow |
+
+### 🪟 Windows features
+- **Clipboard monitor** — SMB link in clipboard → opens automatically (like Cmd+V auto-open on macOS)
+- **Explorer context menu** → **"Copy SMB link"** — converts `\\server\share\path` to `smb://server/share/path` (like Finder Quick Actions on macOS)
+- **Auto-update** — daily check against GitHub Releases
+- **Mapped drives** — `Z:\folder` resolved automatically via `WNetGetUniversalNameW`
 
 ## 🔧 Permissions
 
