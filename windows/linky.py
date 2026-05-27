@@ -231,7 +231,7 @@ def _start_clipboard_monitor() -> None:
 # ---------------------------------------------------------------------------
 
 def _notify(title: str, message: str) -> None:
-    """Benachrichtigung via Tray-Icon (pystray) oder Windows-Balloon."""
+    """Benachrichtigung via Tray-Icon (pystray) oder MessageBox-Fallback."""
     global _icon_ref
     try:
         if _icon_ref is not None:
@@ -239,15 +239,9 @@ def _notify(title: str, message: str) -> None:
             return
     except Exception:
         pass
-    # Fallback ohne laufenden Daemon
+    # Fallback wenn kein Tray läuft (z. B. --copy / --open Modus)
     try:
-        import subprocess
-        subprocess.Popen(
-            ["powershell", "-WindowStyle", "Hidden", "-Command",
-             f"Add-Type -AssemblyName System.Windows.Forms; "
-             f"[System.Windows.Forms.MessageBox]::Show('{message}','{title}')"],
-            creationflags=0x08000000
-        )
+        ctypes.windll.user32.MessageBoxW(0, message, title, 0x40)  # MB_ICONINFORMATION
     except Exception:
         pass
 
@@ -278,6 +272,7 @@ def _is_newer(remote: str, local: str) -> bool:
 
 def _check_updates(manual: bool = False) -> None:
     def _worker() -> None:
+        release_url = f"https://github.com/{GITHUB_REPO}/releases/latest"
         try:
             req = urllib.request.Request(
                 GITHUB_API,
@@ -287,23 +282,48 @@ def _check_updates(manual: bool = False) -> None:
                 data = json.loads(r.read())
 
             remote   = data.get("tag_name", "").lstrip("v")
-            html_url = data.get("html_url",
-                                f"https://github.com/{GITHUB_REPO}/releases/latest")
+            release_url = data.get("html_url", release_url)
+            assets   = data.get("assets", [])
 
             _cfg["last_update_check"] = int(time.time())
             _save_config(_cfg)
 
+            # Nur Windows-Releases anzeigen (nicht macOS DMGs).
+            # GitHub-Releases sind aktuell macOS-only. Automatischer Check
+            # feuert nur wenn ein Windows-Asset (.exe / .msi / windows*.zip) existiert.
+            has_windows_asset = any(
+                "windows" in a.get("name", "").lower() or
+                a.get("name", "").lower().endswith((".exe", ".msi"))
+                for a in assets
+            )
+
             skipped = _cfg.get("skipped_version", "")
 
-            if _is_newer(remote, APP_VERSION) and remote != skipped:
-                _show_update_dialog(remote, html_url)
-            elif manual:
-                ctypes.windll.user32.MessageBoxW(
-                    0,
-                    f"Du verwendest bereits die neueste Version ({APP_VERSION}).",
-                    f"{APP_NAME} – Aktuell",
-                    0x40
+            if manual:
+                # Manuell: immer Feedback geben, GitHub-Seite anbieten
+                IDYES = 6
+                if has_windows_asset and _is_newer(remote, APP_VERSION) and remote != skipped:
+                    msg = (
+                        f"{APP_NAME} {remote} ist verfügbar!\n"
+                        f"Installierte Version: {APP_VERSION}\n\n"
+                        "GitHub öffnen und aktualisieren?"
+                    )
+                else:
+                    msg = (
+                        f"Installierte Version: {APP_VERSION}\n"
+                        f"Aktuelle GitHub-Version: {remote}\n\n"
+                        "GitHub-Releases öffnen?"
+                    )
+                result = ctypes.windll.user32.MessageBoxW(
+                    0, msg, f"{APP_NAME} – Updates", 0x24  # MB_YESNO
                 )
+                if result == IDYES:
+                    webbrowser.open(release_url)
+            else:
+                # Automatisch: nur bei Windows-Asset und neuer Version
+                if has_windows_asset and _is_newer(remote, APP_VERSION) and remote != skipped:
+                    _show_update_dialog(remote, release_url)
+
         except Exception as e:
             if manual:
                 _show_error(f"Update-Prüfung fehlgeschlagen:\n{e}")
