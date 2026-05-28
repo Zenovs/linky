@@ -77,43 +77,78 @@ _cfg = _load_config()
 CF_UNICODETEXT = 13
 GMEM_MOVEABLE  = 0x0002
 
+# WICHTIG: Ohne restype/argtypes nimmt ctypes 32-bit c_int an. Auf 64-bit
+# Windows werden Handles/Pointer (GlobalAlloc, GlobalLock, …) dann auf 32 Bit
+# abgeschnitten → defekte Handles → Clipboard schlägt fehl. Daher Prototypen:
+_user32   = ctypes.windll.user32
+_kernel32 = ctypes.windll.kernel32
+
+_user32.OpenClipboard.argtypes    = [ctypes.wintypes.HWND]
+_user32.OpenClipboard.restype     = ctypes.wintypes.BOOL
+_user32.CloseClipboard.restype    = ctypes.wintypes.BOOL
+_user32.EmptyClipboard.restype    = ctypes.wintypes.BOOL
+_user32.GetClipboardData.argtypes = [ctypes.wintypes.UINT]
+_user32.GetClipboardData.restype  = ctypes.wintypes.HANDLE
+_user32.SetClipboardData.argtypes = [ctypes.wintypes.UINT, ctypes.wintypes.HANDLE]
+_user32.SetClipboardData.restype  = ctypes.wintypes.HANDLE
+
+_kernel32.GlobalAlloc.argtypes    = [ctypes.wintypes.UINT, ctypes.c_size_t]
+_kernel32.GlobalAlloc.restype     = ctypes.wintypes.HANDLE
+_kernel32.GlobalLock.argtypes     = [ctypes.wintypes.HANDLE]
+_kernel32.GlobalLock.restype      = ctypes.wintypes.LPVOID
+_kernel32.GlobalUnlock.argtypes   = [ctypes.wintypes.HANDLE]
+_kernel32.GlobalUnlock.restype    = ctypes.wintypes.BOOL
+_kernel32.GlobalFree.argtypes     = [ctypes.wintypes.HANDLE]
+_kernel32.GlobalFree.restype      = ctypes.wintypes.HANDLE
+
 
 def _get_clipboard_text() -> str | None:
-    if not ctypes.windll.user32.OpenClipboard(0):
+    if not _user32.OpenClipboard(None):
         return None
     try:
-        handle = ctypes.windll.user32.GetClipboardData(CF_UNICODETEXT)
+        handle = _user32.GetClipboardData(CF_UNICODETEXT)
         if not handle:
             return None
-        ptr = ctypes.windll.kernel32.GlobalLock(handle)
+        ptr = _kernel32.GlobalLock(handle)
         if not ptr:
             return None
-        text = ctypes.wstring_at(ptr)
-        ctypes.windll.kernel32.GlobalUnlock(handle)
+        try:
+            text = ctypes.wstring_at(ptr)
+        finally:
+            _kernel32.GlobalUnlock(handle)
         return text
     except Exception:
         return None
     finally:
-        ctypes.windll.user32.CloseClipboard()
+        _user32.CloseClipboard()
 
 
 def _set_clipboard_text(text: str) -> bool:
-    """Schreibt Text in die Windows-Zwischenablage."""
-    if not ctypes.windll.user32.OpenClipboard(0):
+    """Schreibt Text in die Windows-Zwischenablage (CF_UNICODETEXT)."""
+    data = (text + "\0").encode("utf-16-le")
+    if not _user32.OpenClipboard(None):
         return False
     try:
-        ctypes.windll.user32.EmptyClipboard()
-        data = (text + "\0").encode("utf-16-le")
-        h = ctypes.windll.kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
-        ptr = ctypes.windll.kernel32.GlobalLock(h)
+        _user32.EmptyClipboard()
+        h = _kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
+        if not h:
+            return False
+        ptr = _kernel32.GlobalLock(h)
+        if not ptr:
+            _kernel32.GlobalFree(h)
+            return False
         ctypes.memmove(ptr, data, len(data))
-        ctypes.windll.kernel32.GlobalUnlock(h)
-        ctypes.windll.user32.SetClipboardData(CF_UNICODETEXT, h)
+        _kernel32.GlobalUnlock(h)
+        # Erfolg prüfen: bei NULL besitzen WIR den Speicher noch und müssen ihn freigeben.
+        if not _user32.SetClipboardData(CF_UNICODETEXT, h):
+            _kernel32.GlobalFree(h)
+            return False
+        # Ab hier besitzt das System den Speicher — NICHT freigeben.
         return True
     except Exception:
         return False
     finally:
-        ctypes.windll.user32.CloseClipboard()
+        _user32.CloseClipboard()
 
 # ---------------------------------------------------------------------------
 # Pfad-Konvertierung  SMB ↔ UNC
