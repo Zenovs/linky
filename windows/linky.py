@@ -58,7 +58,7 @@ def _load_config() -> dict:
                 return json.load(f)
     except Exception:
         pass
-    return {"auto_open": True, "autostart": False, "auto_update": True,
+    return {"autostart": False, "auto_update": True,
             "last_update_check": 0, "skipped_version": ""}
 
 
@@ -297,30 +297,19 @@ def _copy_smb_link(path: str) -> None:
         _show_error(f"Zwischenablage konnte nicht beschrieben werden.\n\n{smb}")
 
 # ---------------------------------------------------------------------------
-# Zwischenablage-Monitor  (Clipboard-Sequenznummer, kein Polling-Overhead)
+# SMB-Link aus Zwischenablage öffnen  (explizit, auf Knopfdruck)
 # ---------------------------------------------------------------------------
+#
+# Bewusst KEIN automatischer Clipboard-Monitor mehr: Kopieren soll nur kopieren.
+# Öffnen passiert explizit — per Klick auf einen smb://-Link (Protokoll-Handler),
+# per „SMB-Link öffnen" Kontextmenü, oder per Tray-Menü unten.
 
-def _start_clipboard_monitor() -> None:
-    """Überwacht die Zwischenablage auf smb:// Links und öffnet sie automatisch."""
-    last_seq = [ctypes.windll.user32.GetClipboardSequenceNumber()]
-
-    def _poll() -> None:
-        while True:
-            try:
-                seq = ctypes.windll.user32.GetClipboardSequenceNumber()
-                if seq != last_seq[0]:
-                    last_seq[0] = seq
-                    text = _get_clipboard_text()
-                    if text:
-                        text = text.strip()
-                        if _cfg.get("auto_open", True) and _is_valid_smb(text):
-                            _notify(APP_NAME, "SMB-Link wird geöffnet…")
-                            _open_smb(text)
-            except Exception:
-                pass
-            time.sleep(0.8)
-
-    threading.Thread(target=_poll, daemon=True, name="ClipboardMonitor").start()
+def _open_clipboard_link() -> None:
+    text = (_get_clipboard_text() or "").strip()
+    if _is_valid_smb(text):
+        _open_smb(text)
+    else:
+        _notify(APP_NAME, "Kein gültiger SMB-Link in der Zwischenablage.")
 
 # ---------------------------------------------------------------------------
 # Benachrichtigungen
@@ -537,14 +526,11 @@ def _run_tray() -> None:
 
     # ── Menü-Callbacks ───────────────────────────────────────────────────────
 
-    def _auto_open_checked(item):   return bool(_cfg.get("auto_open",   True))
     def _autostart_checked(item):   return bool(_cfg.get("autostart",   False))
     def _auto_update_checked(item): return bool(_cfg.get("auto_update", True))
 
-    def _toggle_auto_open(icon, item):
-        _cfg["auto_open"] = not _cfg.get("auto_open", True)
-        _save_config(_cfg)
-        icon.update_menu()
+    def _open_clipboard(icon, item):
+        _open_clipboard_link()
 
     def _toggle_autostart(icon, item):
         new_val = not _cfg.get("autostart", False)
@@ -574,8 +560,9 @@ def _run_tray() -> None:
     menu = pystray.Menu(
         pystray.MenuItem(f"{APP_NAME} v{APP_VERSION}", None, enabled=False),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem("Automatisch öffnen", _toggle_auto_open,
-                         checked=_auto_open_checked),
+        pystray.MenuItem("SMB-Link aus Zwischenablage öffnen", _open_clipboard,
+                         default=True),
+        pystray.Menu.SEPARATOR,
         pystray.MenuItem("Autostart aktivieren", _toggle_autostart,
                          checked=_autostart_checked),
         pystray.MenuItem("Auto-Update aktivieren", _toggle_auto_update,
@@ -591,7 +578,7 @@ def _run_tray() -> None:
     _icon_ref = icon
 
     # ── Hintergrundaufgaben starten ──────────────────────────────────────────
-    _start_clipboard_monitor()
+    # Kein Clipboard-Monitor mehr — Kopieren öffnet nicht mehr automatisch.
 
     if _cfg.get("auto_update", True):
         last = _cfg.get("last_update_check", 0)
@@ -626,6 +613,10 @@ if __name__ == "__main__":
 
     else:
         # Browser / Protokoll-Handler: linky.py smb://…
+        # Expliziter Klick auf einen Link → IMMER öffnen (nicht von auto_open
+        # abhängig — der Nutzer hat ja bewusst geklickt).
         url = args[0]
-        if _cfg.get("auto_open", True) and _is_valid_smb(url):
+        if _is_valid_smb(url):
             _open_smb(url)
+        else:
+            _show_error(f"Kein gültiger SMB-Link:\n{url}")
