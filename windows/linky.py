@@ -139,23 +139,45 @@ def _unc_to_smb(path: str) -> str | None:
     return None
 
 
+class _UNIVERSAL_NAME_INFO(ctypes.Structure):
+    # WNetGetUniversalNameW (Level 1) schreibt diese Struktur in den Buffer.
+    # Das erste Feld ist ein POINTER auf den eigentlichen \\server\share-String,
+    # der weiter hinten im selben Buffer liegt — NICHT der String selbst!
+    _fields_ = [("lpUniversalName", ctypes.c_wchar_p)]
+
+
 def _resolve_to_unc(path: str) -> str | None:
     """Löst gemappte Laufwerksbuchstaben (Z:\\) auf UNC-Pfade (\\\\server\\share) auf."""
     path = path.strip().rstrip("\\")
     if path.startswith("\\\\"):
         return path  # Bereits UNC
     if len(path) >= 2 and path[1] == ":":
-        drive = path[:2].upper()
-        rest  = path[2:]
+        drive = path[:2].upper()      # z. B. "Z:"
+        rest  = path[2:]              # Rest des Pfads nach dem Laufwerk
         try:
-            buf  = ctypes.create_unicode_buffer(1024)
-            size = ctypes.c_ulong(1024)
-            # WNetGetUniversalNameW: UNIVERSAL_NAME_INFO_LEVEL = 1
+            UNIVERSAL_NAME_INFO_LEVEL = 1
+            ERROR_MORE_DATA = 234
+            buf  = ctypes.create_unicode_buffer(2048)   # 2048 wchars = 4096 Bytes
+            size = ctypes.c_ulong(ctypes.sizeof(buf))
             rc = ctypes.windll.mpr.WNetGetUniversalNameW(
-                drive, 1, buf, ctypes.byref(size)
+                ctypes.c_wchar_p(drive), UNIVERSAL_NAME_INFO_LEVEL,
+                buf, ctypes.byref(size)
             )
+            # Falls Buffer zu klein war: mit gemeldeter Größe erneut versuchen.
+            if rc == ERROR_MORE_DATA:
+                buf  = ctypes.create_unicode_buffer(size.value // 2 + 16)
+                size = ctypes.c_ulong(ctypes.sizeof(buf))
+                rc = ctypes.windll.mpr.WNetGetUniversalNameW(
+                    ctypes.c_wchar_p(drive), UNIVERSAL_NAME_INFO_LEVEL,
+                    buf, ctypes.byref(size)
+                )
             if rc == 0:
-                return buf.value + rest
+                info = ctypes.cast(
+                    buf, ctypes.POINTER(_UNIVERSAL_NAME_INFO)
+                ).contents
+                universal = info.lpUniversalName  # echter \\server\share Pfad
+                if universal and universal.startswith("\\\\"):
+                    return universal + rest
         except Exception:
             pass
     return None
