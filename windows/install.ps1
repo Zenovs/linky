@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     Linky – Windows Installer
@@ -81,10 +81,20 @@ if (-not $pyCmd) {
     # Versuch 2: Offiziellen Installer herunterladen und still installieren
     if (-not $pyCmd) {
         $pyVer = "3.12.7"
-        $arch  = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "win32" }
-        $pyUrl = "https://www.python.org/ftp/python/$pyVer/python-$pyVer-$arch.exe"
+        # Korrekte Installer-Dateinamen je Architektur:
+        #   64-bit:  python-X.Y.Z-amd64.exe
+        #   ARM64:   python-X.Y.Z-arm64.exe
+        #   32-bit:  python-X.Y.Z.exe        (KEIN Suffix — '-win32' existiert nicht)
+        $procArch = $env:PROCESSOR_ARCHITEW6432
+        if (-not $procArch) { $procArch = $env:PROCESSOR_ARCHITECTURE }
+        switch ($procArch) {
+            "ARM64" { $suffix = "-arm64" }
+            "AMD64" { $suffix = "-amd64" }
+            default { $suffix = "" }
+        }
+        $pyUrl = "https://www.python.org/ftp/python/$pyVer/python-$pyVer$suffix.exe"
         $pyExe = "$env:TEMP\linky-python-setup.exe"
-        Write-Host "  Lade offiziellen Python-Installer ($pyVer $arch)…" -ForegroundColor White
+        Write-Host "  Lade offiziellen Python-Installer ($pyVer $procArch)…" -ForegroundColor White
         try {
             Invoke-WebRequest -Uri $pyUrl -OutFile $pyExe -UseBasicParsing
             Write-Host "  Installiere Python still (nur aktueller Benutzer, +PATH +pip)…" -ForegroundColor White
