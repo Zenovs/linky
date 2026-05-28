@@ -53,9 +53,11 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/linux/unin
 powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest https://raw.githubusercontent.com/Zenovs/linky/main/windows/install.ps1 -OutFile install.ps1; .\install.ps1"
 ```
 
-Voraussetzungen: Python 3 (mit „Add to PATH" Haken bei der Installation)
+Keine Voraussetzungen — **Python wird automatisch installiert** (via winget, sonst stiller Direkt-Download), falls nicht vorhanden. Kein Admin nötig.
 
 **Was passiert:**
+- Installiert Python 3 automatisch falls nicht vorhanden (winget → Fallback python.org silent)
+- Installiert `pystray` + `Pillow` automatisch via pip
 - `linky.py` → `%LOCALAPPDATA%\Linky\`
 - Registriert `smb://` Protokoll in der Windows-Registry (`HKCU`)
 - Kontextmenü „SMB-Link kopieren" in Explorer (Ordner, Laufwerke, Netzwerk)
@@ -239,9 +241,11 @@ bash <(curl -fsSL https://raw.githubusercontent.com/Zenovs/linky/main/linux/unin
 powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest https://raw.githubusercontent.com/Zenovs/linky/main/windows/install.ps1 -OutFile install.ps1; .\install.ps1"
 ```
 
-Requirements: Python 3 (check "Add to PATH" during installation)
+No prerequisites — **Python is installed automatically** (via winget, or a silent direct download fallback) if missing. No admin required.
 
 **What happens:**
+- Auto-installs Python 3 if missing (winget → python.org silent fallback)
+- Auto-installs `pystray` + `Pillow` via pip
 - `linky.py` → `%LOCALAPPDATA%\Linky\`
 - Registers `smb://` protocol in Windows Registry (`HKCU` — no admin needed)
 - Context menu "Copy SMB link" in Explorer (folders, drives, network shares)

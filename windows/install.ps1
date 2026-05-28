@@ -33,30 +33,81 @@ Write-Host ""
 Write-Host "  SMB-Link Handler für Windows" -ForegroundColor DarkGray
 Write-Host ""
 
-# ── 1. Python prüfen ──────────────────────────────────────────────────────────
+# ── 1. Python prüfen / automatisch installieren ───────────────────────────────
 Step "Python prüfen"
 
-$python  = $null
-$pythonw = $null
-
-foreach ($cmd in @("python", "python3", "py")) {
-    try {
-        $ver = & $cmd --version 2>&1
-        if ($ver -match "Python 3") {
-            $python  = (Get-Command $cmd -ErrorAction SilentlyContinue).Source
-            $pythonw = Join-Path (Split-Path $python) "pythonw.exe"
-            if (-not (Test-Path $pythonw)) { $pythonw = $python }
-            Ok "$ver  ($python)"
-            break
-        }
-    } catch { }
+# Aktualisiert die PATH-Variable der aktuellen Session (nach einer Installation).
+function Update-SessionPath {
+    $machine = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $user    = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $env:Path = "$machine;$user"
 }
 
-if (-not $python) {
-    Warn "Python 3 nicht gefunden."
+# Findet einen echten Python-3-Interpreter (überspringt den Microsoft-Store-Stub).
+function Find-Python {
+    foreach ($cmd in @("python", "python3", "py")) {
+        $g = Get-Command $cmd -ErrorAction SilentlyContinue
+        if (-not $g) { continue }
+        $src = $g.Source
+        if (-not $src) { continue }
+        if ($src -like "*WindowsApps*") { continue }   # Store-Alias-Stub ignorieren
+        try {
+            $ver = & $cmd --version 2>&1
+            if ($ver -match "Python 3") { return $cmd }
+        } catch { }
+    }
+    return $null
+}
+
+$pyCmd = Find-Python
+
+if (-not $pyCmd) {
+    Warn "Python 3 nicht gefunden – wird automatisch installiert."
+
+    # Versuch 1: winget (auf Windows 10 1809+ / 11 vorinstalliert)
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    if ($winget) {
+        Write-Host "  Installiere Python 3 via winget…" -ForegroundColor White
+        try {
+            & winget install -e --id Python.Python.3.12 --scope user `
+                --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
+            Update-SessionPath
+            $pyCmd = Find-Python
+        } catch {
+            Warn "winget-Installation fehlgeschlagen: $_"
+        }
+    }
+
+    # Versuch 2: Offiziellen Installer herunterladen und still installieren
+    if (-not $pyCmd) {
+        $pyVer = "3.12.7"
+        $arch  = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "win32" }
+        $pyUrl = "https://www.python.org/ftp/python/$pyVer/python-$pyVer-$arch.exe"
+        $pyExe = "$env:TEMP\linky-python-setup.exe"
+        Write-Host "  Lade offiziellen Python-Installer ($pyVer $arch)…" -ForegroundColor White
+        try {
+            Invoke-WebRequest -Uri $pyUrl -OutFile $pyExe -UseBasicParsing
+            Write-Host "  Installiere Python still (nur aktueller Benutzer, +PATH +pip)…" -ForegroundColor White
+            Start-Process -FilePath $pyExe -Wait -ArgumentList @(
+                "/quiet",
+                "InstallAllUsers=0",
+                "PrependPath=1",
+                "Include_pip=1",
+                "Include_launcher=1"
+            )
+            Remove-Item $pyExe -Force -ErrorAction SilentlyContinue
+            Update-SessionPath
+            $pyCmd = Find-Python
+        } catch {
+            Warn "Download/Installation fehlgeschlagen: $_"
+        }
+    }
+}
+
+if (-not $pyCmd) {
     Write-Host ""
-    Write-Host "  Bitte Python 3 installieren:" -ForegroundColor Yellow
-    Write-Host "  https://www.python.org/downloads/" -ForegroundColor White
+    Write-Host "  Automatische Python-Installation nicht möglich." -ForegroundColor Yellow
+    Write-Host "  Bitte manuell installieren: https://www.python.org/downloads/" -ForegroundColor White
     Write-Host "  (Haken setzen bei 'Add Python to PATH')" -ForegroundColor White
     Write-Host ""
     $open = Read-Host "  Jetzt python.org öffnen? [J/n]"
@@ -65,6 +116,18 @@ if (-not $python) {
     }
     Fail "Python 3 wird benötigt."
 }
+
+# Echten Interpreter-Pfad auflösen (auch wenn via 'py'-Launcher gefunden).
+$python = & $pyCmd -c "import sys; print(sys.executable)" 2>$null
+if ($python) { $python = $python.Trim() }
+if (-not $python -or -not (Test-Path $python)) {
+    $python = (Get-Command $pyCmd -ErrorAction SilentlyContinue).Source
+}
+
+$pythonw = Join-Path (Split-Path $python) "pythonw.exe"
+if (-not (Test-Path $pythonw)) { $pythonw = $python }
+
+Ok "Python: $python"
 
 # ── 2. Skript installieren ────────────────────────────────────────────────────
 Step "Linky installieren"
@@ -91,12 +154,27 @@ Ok "Installiert: $ScriptDest"
 # ── 3. pip-Pakete ─────────────────────────────────────────────────────────────
 Step "Python-Pakete installieren (pystray + Pillow)"
 
-try {
+# pip sicherstellen + aktualisieren (frische Python-Installs haben es schon,
+# ältere oder abgespeckte evtl. nicht).
+& $python -m ensurepip --upgrade 2>&1 | Out-Null
+& $python -m pip install --quiet --upgrade pip 2>&1 | Out-Null
+
+# Hinweis: try/catch fängt Exit-Codes externer EXEs NICHT — daher $LASTEXITCODE.
+$pipOk = $false
+& $python -m pip install --quiet pystray Pillow 2>&1 | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    $pipOk = $true
+} else {
+    # Fallback mit --user (falls system-weite Installation nicht erlaubt)
     & $python -m pip install --quiet --user pystray Pillow 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) { $pipOk = $true }
+}
+
+if ($pipOk) {
     Ok "pystray und Pillow installiert"
-} catch {
+} else {
     Warn "pip-Installation fehlgeschlagen – Tray-Icon nicht verfügbar."
-    Warn "Manuell: pip install pystray Pillow"
+    Warn "Manuell: $python -m pip install pystray Pillow"
 }
 
 # ── 4. smb:// Protokoll-Handler registrieren ──────────────────────────────────
