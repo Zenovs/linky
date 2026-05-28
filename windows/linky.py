@@ -124,10 +124,28 @@ def _get_clipboard_text() -> str | None:
 
 
 def _set_clipboard_text(text: str) -> bool:
-    """Schreibt Text in die Windows-Zwischenablage (CF_UNICODETEXT)."""
+    """Schreibt Text in die Zwischenablage. Erst native API (mit Retry, da die
+    Zwischenablage eine globale Single-Owner-Ressource ist), dann PowerShell-
+    Fallback (immun gegen Contention & Quoting)."""
+    if _set_clipboard_native(text):
+        return True
+    return _set_clipboard_powershell(text)
+
+
+def _set_clipboard_native(text: str) -> bool:
     data = (text + "\0").encode("utf-16-le")
-    if not _user32.OpenClipboard(None):
+
+    # OpenClipboard kann scheitern wenn ein anderer Prozess (Explorer,
+    # Clipboard-Manager, RDP) sie gerade hält → mehrfach versuchen.
+    opened = False
+    for _ in range(20):
+        if _user32.OpenClipboard(None):
+            opened = True
+            break
+        time.sleep(0.05)
+    if not opened:
         return False
+
     try:
         _user32.EmptyClipboard()
         h = _kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
@@ -139,16 +157,37 @@ def _set_clipboard_text(text: str) -> bool:
             return False
         ctypes.memmove(ptr, data, len(data))
         _kernel32.GlobalUnlock(h)
-        # Erfolg prüfen: bei NULL besitzen WIR den Speicher noch und müssen ihn freigeben.
+        # Bei NULL besitzen WIR den Speicher noch und müssen ihn freigeben.
         if not _user32.SetClipboardData(CF_UNICODETEXT, h):
             _kernel32.GlobalFree(h)
             return False
-        # Ab hier besitzt das System den Speicher — NICHT freigeben.
-        return True
+        return True  # ab hier besitzt das System den Speicher
     except Exception:
         return False
     finally:
         _user32.CloseClipboard()
+
+
+def _set_clipboard_powershell(text: str) -> bool:
+    """Fallback via PowerShell Set-Clipboard. Text base64-kodiert übergeben,
+    damit Sonderzeichen/Quoting keine Rolle spielen."""
+    try:
+        import base64
+        b64 = base64.b64encode(text.encode("utf-16-le")).decode("ascii")
+        ps = (
+            "$b=[Convert]::FromBase64String('" + b64 + "');"
+            "$t=[Text.Encoding]::Unicode.GetString($b);"
+            "Set-Clipboard -Value $t"
+        )
+        CREATE_NO_WINDOW = 0x08000000
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+            creationflags=CREATE_NO_WINDOW,
+            capture_output=True,
+        )
+        return proc.returncode == 0
+    except Exception:
+        return False
 
 # ---------------------------------------------------------------------------
 # Pfad-Konvertierung  SMB ↔ UNC
