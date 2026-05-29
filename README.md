@@ -90,7 +90,7 @@ powershell -ExecutionPolicy Bypass -File uninstall.ps1
 
 ### 📡 NAS / SMB (Linky-DNA)
 - **Bonjour-Discovery** — SMB-Server im LAN erscheinen automatisch in der Sidebar unter „Im Netzwerk", kein „Verbinden mit Server"-Dialog mehr
-- **Auto-Mount** ⚡ — Verknüpfung beim App-Start und Netzwerkwechsel (Wi-Fi → Ethernet, VPN-Connect) automatisch einbinden, lautlos wenn Credentials im Schlüsselbund
+- ~~**Auto-Mount**~~ — *vorübergehend deaktiviert* (verursacht Verbindungsversuche ausserhalb des internen Netzes)
 - **SMB-Bookmarks** — Server pinnen mit eigenem Namen, persistent über Neustarts
 - **SMB-URL-Handler** — `smb://`-Links aus Browser/Mail öffnen direkt
 - **Rechtsklick im Finder** → „SMB-Link kopieren" / „SMB-Link öffnen" (Quick Actions automatisch installiert)
@@ -119,7 +119,7 @@ powershell -ExecutionPolicy Bypass -File uninstall.ps1
 - **Transparent Title-Bar** + Full-Size-Content für moderne Browser-Optik
 
 ### 🖥 System-Integration
-- **Dock-Icon** + **Menüleisten-Icon** parallel — App läuft auch wenn Fenster zu (Auto-Mount + Quick Actions weiter aktiv)
+- **Dock-Icon** + **Menüleisten-Icon** parallel — App läuft auch wenn Fenster zu (Quick Actions weiter aktiv)
 - **Autostart** optional beim Anmelden
 - **Auto-Update** über GitHub Releases (täglicher Check, In-App-Install)
 
@@ -147,7 +147,7 @@ Siehe [BUILD.md](docs/BUILD.md).
 1. **Installieren** (siehe oben)
 2. **Dock-Icon klicken** oder **Menüleisten-🔗** → „Linky öffnen ⌘O"
 3. **Browser-Fenster** öffnet sich mit Sidebar
-4. **NAS hinzufügen**: Sidebar → „+ SMB-Server verbinden…" → Server eingeben → „Automatisch verbinden" aktivieren → fertig
+4. **NAS hinzufügen**: Sidebar → „+ SMB-Server verbinden…" → Server eingeben → fertig
 5. **Suchen**: Tippe in das Such-Feld, schalte Scope via Pill (Ordner / Mac / NAS)
 6. **Type-to-Filter**: Klick irgendwo in der Liste, fang an zu tippen → live gefiltert
 
