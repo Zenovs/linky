@@ -168,27 +168,12 @@ struct SidebarView: View {
                             title: b.name,
                             systemImage: "externaldrive.connected.to.line.below.fill",
                             tint: Theme.lavender,
-                            trailing: {
-                                AnyView(
-                                    Group {
-                                        if b.autoMount {
-                                            Image(systemName: "bolt.fill")
-                                                .font(.system(size: 8, weight: .bold))
-                                                .foregroundColor(Theme.amber)
-                                                .help("Wird automatisch verbunden")
-                                        }
-                                    }
-                                )
-                            }
+                            trailing: { AnyView(EmptyView()) }
                         )
                         .tag(SidebarItem.smbBookmark(b))
                         .listRowBackground(Color.clear)
                         .contextMenu {
                             Button("Verbinden") { onOpenBookmark(b) }
-                            Toggle("Automatisch verbinden", isOn: Binding(
-                                get: { b.autoMount },
-                                set: { bookmarks.setAutoMount(b, enabled: $0) }
-                            ))
                             Divider()
                             Button("URL kopieren") {
                                 let pb = NSPasteboard.general

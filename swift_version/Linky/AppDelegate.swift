@@ -90,8 +90,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Setup periodic update check
         setupUpdateTimer()
 
-        // Start auto-mount service for SMB bookmarks
-        AutoMountService.shared.start()
+        // Auto-Mount deaktiviert: ausserhalb des internen Netzes entstehen
+        // sonst endlos-Verbindungsversuche für alle Mitarbeiter.
+        // AutoMountService.shared.start()
 
         // Start Bonjour browser so the sidebar surfaces LAN SMB servers
         BonjourBrowser.shared.start()
@@ -100,7 +101,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
     
     // Keep the app alive when the browser window is closed — the status-bar
-    // item, SMB-handler and auto-mount service must keep running.
+    // item and SMB-handler must keep running.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false
     }
