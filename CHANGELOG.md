@@ -7,6 +7,13 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 
 ---
 
+## [3.0.3] - 2026-05-29
+
+### Geändert
+- 🔌 **Auto-Mount („Automatisch verbinden") deaktiviert** — die Funktion löste ausserhalb des internen Netzes (z. B. im Home-Office oder unterwegs) endlose Verbindungsversuche zu den NAS-Shares aus. Bis zu einer robusteren Lösung ist das automatische Wiederverbinden beim Start/Netzwerkwechsel abgeschaltet. SMB-Bookmarks, Bonjour-Discovery und manuelles Verbinden funktionieren unverändert.
+
+---
+
 ## [3.0.2] - 2026-05-26
 
 ### Behoben
